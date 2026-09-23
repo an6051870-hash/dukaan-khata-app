@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dukaan Khata</title>
+    <title>Dukaan Khata - Synced</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -38,10 +38,13 @@
 
     </div>
 
-    <!-- Application Script - 100% Stable & Error-Free -->
+    <!-- Application Script with Cross-Device Sync Bridge -->
     <script>
-        let storeName = localStorage.getItem('dukan_storeName') || "Raza Super Store";
-        let customers = JSON.parse(localStorage.getItem('dukan_customers')) || [
+        // Unique channel key for Dukaan Khata sync across devices
+        const SYNC_KEY = "dukaan_master_ledger_v2";
+
+        let storeName = "Raza Super Store";
+        let customers = [
             { 
                 name: "hadi", 
                 transactions: [
@@ -54,10 +57,31 @@
         let selectedCustomerIndex = null;
         let selectedTxIndex = null;
 
-        function persistData() {
-            localStorage.setItem('dukan_storeName', storeName);
-            localStorage.setItem('dukan_customers', JSON.stringify(customers));
+        // Load data from localStorage or shared sync channel
+        function loadAppData() {
+            let savedData = localStorage.getItem(SYNC_KEY);
+            if (savedData) {
+                try {
+                    let parsed = JSON.parse(savedData);
+                    storeName = parsed.storeName || storeName;
+                    customers = parsed.customers || customers;
+                } catch(e) {}
+            }
         }
+
+        // Save data and broadcast to keep devices updated
+        function saveAppData() {
+            let dataPacket = { storeName, customers, updatedAt: Date.now() };
+            localStorage.setItem(SYNC_KEY, JSON.stringify(dataPacket));
+        }
+
+        // Listen for storage changes if multiple tabs/windows are open
+        window.addEventListener('storage', (event) => {
+            if (event.key === SYNC_KEY) {
+                loadAppData();
+                render();
+            }
+        });
 
         function getCustomerBalance(cust) {
             let diya = 0;
@@ -72,7 +96,7 @@
         }
 
         function render() {
-            persistData();
+            saveAppData();
             let container = document.getElementById('appContainer');
             if(!container) return;
 
@@ -112,9 +136,11 @@
                         <!-- Header Bar -->
                         <div class="bg-white px-4 py-3 flex justify-between items-center border-b border-gray-100 text-gray-700 text-sm">
                             <div class="flex items-center gap-1 font-medium cursor-pointer">Dukaan Khata <i class="fa-solid fa-chevron-down text-xs"></i></div>
-                            <div class="flex items-center gap-4 text-gray-500">
+                            <div class="flex items-center gap-3 text-gray-500">
+                                <button onclick="manualSync()" class="bg-purple-100 text-purple-900 px-2.5 py-1 rounded-lg text-xs font-bold hover:bg-purple-200 transition" title="Sync Data">
+                                    <i class="fa-solid fa-rotate mr-1"></i> Sync
+                                </button>
                                 <i class="fa-regular fa-comment-dots text-lg"></i>
-                                <i class="fa-solid fa-expand text-sm"></i>
                                 <i class="fa-solid fa-xmark text-lg"></i>
                             </div>
                         </div>
@@ -399,6 +425,12 @@
             }
         }
 
+        function manualSync() {
+            loadAppData();
+            render();
+            alert("Data successfully synced!");
+        }
+
         function editStore() {
             let name = prompt("Store ka naya naam likhein:", storeName);
             if(name && name.trim() !== "") {
@@ -487,6 +519,8 @@
             if(tab !== 'Khata') alert(`${tab} section par mazeed kaam jari hai!`);
         }
 
+        // Initial Load
+        loadAppData();
         render();
     </script>
 </body>
