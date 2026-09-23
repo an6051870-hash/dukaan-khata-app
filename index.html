@@ -15,9 +15,7 @@
     <div class="w-full max-w-md bg-gray-50 min-h-screen relative shadow-2xl flex flex-col justify-between">
 
         <!-- Main Dynamic View Container -->
-        <div id="appContainer">
-            <!-- Content will be loaded dynamically via JS -->
-        </div>
+        <div id="appContainer"></div>
 
         <!-- Bottom Navigation Bar -->
         <div class="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-around py-2 shadow-lg z-50">
@@ -40,7 +38,7 @@
 
     </div>
 
-    <!-- JavaScript for Advanced Khata & History -->
+    <!-- JavaScript with Visual Graph -->
     <script>
         let storeName = localStorage.getItem('adv_store_name') || "Raza Super Store";
         let customers = JSON.parse(localStorage.getItem('adv_customers')) || [
@@ -48,12 +46,12 @@
                 name: "hadi", 
                 transactions: [
                     { type: 'diya', amount: 8000, date: '2026-09-23' },
-                    { type: 'mila', amount: 69, date: '2026-09-23' }
+                    { type: 'mila', amount: 100, date: '2026-09-23' }
                 ] 
             }
         ];
 
-        let currentView = 'home'; // 'home' or 'detail'
+        let currentView = 'home';
         let selectedCustomerIndex = null;
 
         function getCustomerBalance(cust) {
@@ -158,6 +156,11 @@
                 let res = getCustomerBalance(cust);
                 let today = new Date().toISOString().split('T')[0];
 
+                // Calculate percentages for the graph bars
+                let maxVal = Math.max(res.diya, res.mila, 1);
+                let diyaPercent = Math.round((res.diya / maxVal) * 100);
+                let milaPercent = Math.round((res.mila / maxVal) * 100);
+
                 let historyHTML = '';
                 if(cust.transactions.length === 0) {
                     historyHTML = `<p class="text-gray-400 text-center py-4 text-xs">Abhi koi transaction nahi hai.</p>`;
@@ -218,16 +221,43 @@
                                 </div>
                             </div>
 
-                            <!-- Graph / Summary Breakdown -->
+                            <!-- Hisab ka Breakdown & Visual Graph -->
                             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
-                                <div class="font-bold text-gray-800 text-sm mb-3">Hisab ka Breakdown</div>
-                                <div class="flex justify-between text-xs py-1 border-b border-gray-50">
+                                <div class="font-bold text-gray-800 text-sm mb-3 flex items-center justify-between">
+                                    <span>Hisab ka Breakdown</span>
+                                    <i class="fa-solid fa-chart-bar text-purple-900 text-sm"></i>
+                                </div>
+                                
+                                <!-- Text Details -->
+                                <div class="flex justify-between text-xs py-1 border-b border-gray-50 mb-2">
                                     <span class="text-emerald-600 font-medium"><i class="fa-solid fa-circle text-[8px] mr-1"></i> Aapne Diya:</span>
                                     <span class="font-bold text-gray-800">Rs ${res.diya.toLocaleString()}</span>
                                 </div>
-                                <div class="flex justify-between text-xs py-1 mt-1">
+                                <div class="flex justify-between text-xs py-1 mb-4">
                                     <span class="text-amber-600 font-medium"><i class="fa-solid fa-circle text-[8px] mr-1"></i> Aapko Mila:</span>
                                     <span class="font-bold text-gray-800">Rs ${res.mila.toLocaleString()}</span>
+                                </div>
+
+                                <!-- Visual Bar Graph -->
+                                <div class="space-y-2 pt-2 border-t border-gray-100">
+                                    <div>
+                                        <div class="flex justify-between text-[11px] text-gray-500 mb-1">
+                                            <span>Diya Graph</span>
+                                            <span>${diyaPercent}%</span>
+                                        </div>
+                                        <div class="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
+                                            <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: ${diyaPercent}%"></div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between text-[11px] text-gray-500 mb-1">
+                                            <span>Mila Graph</span>
+                                            <span>${milaPercent}%</span>
+                                        </div>
+                                        <div class="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
+                                            <div class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: ${milaPercent}%"></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
