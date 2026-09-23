@@ -8,6 +8,30 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // Firebase Configuration (Aap apni Firebase credentials yahan laga sakte hain ya default testing server use hoga)
+        const firebaseConfig = {
+            databaseURL: "https://dukaan-khata-default-rtdb.firebaseio.com/"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        window.db = db;
+        window.ref = ref;
+        window.set = set;
+        window.onValue = onValue;
+        window.push = push;
+        window.remove = remove;
+        
+        // Start App once Firebase loads
+        window.initFirebaseApp();
+    </script>
 </head>
 <body class="bg-gray-100 font-sans pb-24 flex justify-center">
 
@@ -15,7 +39,11 @@
     <div class="w-full max-w-md bg-gray-50 min-h-screen relative shadow-2xl flex flex-col justify-between">
 
         <!-- Main Dynamic View Container -->
-        <div id="appContainer"></div>
+        <div id="appContainer">
+            <div class="flex items-center justify-center h-screen text-gray-500 text-sm">
+                <i class="fa-solid fa-spinner fa-spin mr-2">Coonecting to Cloud...</i>
+            </div>
+        </div>
 
         <!-- Bottom Navigation Bar -->
         <div class="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-around py-2 shadow-lg z-50">
@@ -38,36 +66,61 @@
 
     </div>
 
-    <!-- JavaScript with Safe History & Individual Transaction Receipts -->
+    <!-- Application Logic with Real-time Cloud Sync -->
     <script>
-        let storeName = localStorage.getItem('adv_store_name') || "Raza Super Store";
-        let customers = JSON.parse(localStorage.getItem('adv_customers')) || [
-            { 
-                name: "hadi", 
-                transactions: [
-                    { type: 'diya', amount: 8000, details: 'Cash & Sugar', image: '', date: '2026-09-23', txId: 'TXN-98412' },
-                    { type: 'mila', amount: 100, details: 'Cash Received', image: '', date: '2026-09-23', txId: 'TXN-98413' }
-                ] 
-            }
-        ];
-
-        let currentView = 'home'; // 'home', 'detail', 'receipt', 'fullStatement'
+        let storeName = "Raza Super Store";
+        let customers = [];
+        let currentView = 'home'; 
         let selectedCustomerIndex = null;
         let selectedTxIndex = null;
+
+        window.initFirebaseApp = function() {
+            const storeRef = window.ref(window.db, 'dukaan_data');
+            window.onValue(storeRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    storeName = data.storeName || "Raza Super Store";
+                    customers = data.customers || [];
+                } else {
+                    // Default Initial Data
+                    customers = [
+                        { 
+                            name: "hadi", 
+                            transactions: [
+                                { type: 'diya', amount: 8000, details: 'Cash & Sugar', image: '', date: '2026-09-23', txId: 'TXN-98412' }
+                            ] 
+                        }
+                    ];
+                    syncToCloud();
+                }
+                render();
+            });
+        }
+
+        function syncToCloud() {
+            if (!window.db) return;
+            const storeRef = window.ref(window.db, 'dukaan_data');
+            window.set(storeRef, {
+                storeName: storeName,
+                customers: customers
+            }).catch(err => console.error("Sync error:", err));
+        }
 
         function getCustomerBalance(cust) {
             let diya = 0;
             let mila = 0;
-            cust.transactions.forEach(t => {
-                if(t.type === 'diya') diya += t.amount;
-                if(t.type === 'mila') mila += t.amount;
-            });
+            if(cust.transactions) {
+                cust.transactions.forEach(t => {
+                    if(t.type === 'diya') diya += t.amount;
+                    if(t.type === 'mila') mila += t.amount;
+                });
+            }
             return { balance: diya - mila, diya, mila };
         }
 
         function render() {
-            localStorage.setItem('adv_customers', JSON.stringify(customers));
             let container = document.getElementById('appContainer');
+            if(!container) return;
 
             if (currentView === 'home') {
                 let totalMilna = 0;
@@ -104,7 +157,7 @@
                     <div>
                         <!-- Header Bar -->
                         <div class="bg-white px-4 py-3 flex justify-between items-center border-b border-gray-100 text-gray-700 text-sm">
-                            <div class="flex items-center gap-1 font-medium cursor-pointer">Dukaan Khata <i class="fa-solid fa-chevron-down text-xs"></i></div>
+                            <div class="flex items-center gap-1 font-medium cursor-pointer">Dukaan Khata (Cloud) <i class="fa-solid fa-cloud text-emerald-500 text-xs"></i></div>
                             <div class="flex items-center gap-4 text-gray-500">
                                 <i class="fa-regular fa-comment-dots text-lg"></i>
                                 <i class="fa-solid fa-expand text-sm"></i>
@@ -164,7 +217,7 @@
                 let balanceColorClass = res.balance >= 0 ? "text-emerald-600" : "text-amber-600";
 
                 let historyHTML = '';
-                if(cust.transactions.length === 0) {
+                if(!cust.transactions || cust.transactions.length === 0) {
                     historyHTML = `<p class="text-gray-400 text-center py-4 text-xs">Abhi koi transaction nahi hai.</p>`;
                 } else {
                     [...cust.transactions].reverse().forEach((t, revIdx) => {
@@ -288,7 +341,7 @@
                                 </button>
                             </div>
 
-                            <!-- Digital Receipt Card (JazzCash/EasyPaisa style) -->
+                            <!-- Digital Receipt Card -->
                             <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5 shadow-sm text-center">
                                 <div class="w-12 h-12 bg-purple-100 text-purple-900 rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-bold">
                                     <i class="fa-solid fa-check"></i>
@@ -327,20 +380,22 @@
                 let res = getCustomerBalance(cust);
 
                 let statementRows = '';
-                cust.transactions.forEach((t, i) => {
-                    let typeText = t.type === 'diya' ? 'Aapne Diya' : 'Aapko Mila';
-                    let amountColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
-                    let imgHtml = t.image ? `<img src="${t.image}" class="w-10 h-10 object-cover rounded-lg border mt-1">` : '-';
-                    
-                    statementRows += `
-                        <tr class="border-b border-gray-100">
-                            <td class="py-3 px-2 text-xs text-gray-600">${t.date}</td>
-                            <td class="py-3 px-2 text-xs font-bold text-gray-800">${typeText}<br><span class="font-normal text-gray-500">${t.details || '-'}</span></td>
-                            <td class="py-3 px-2 text-xs text-center">${imgHtml}</td>
-                            <td class="py-3 px-2 text-xs text-right font-bold ${amountColor}">Rs ${t.amount.toLocaleString()}</td>
-                        </tr>
-                    `;
-                });
+                if(cust.transactions) {
+                    cust.transactions.forEach((t, i) => {
+                        let typeText = t.type === 'diya' ? 'Aapne Diya' : 'Aapko Mila';
+                        let amountColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
+                        let imgHtml = t.image ? `<img src="${t.image}" class="w-10 h-10 object-cover rounded-lg border mt-1">` : '-';
+                        
+                        statementRows += `
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-2 text-xs text-gray-600">${t.date}</td>
+                                <td class="py-3 px-2 text-xs font-bold text-gray-800">${typeText}<br><span class="font-normal text-gray-500">${t.details || '-'}</span></td>
+                                <td class="py-3 px-2 text-xs text-center">${imgHtml}</td>
+                                <td class="py-3 px-2 text-xs text-right font-bold ${amountColor}">Rs ${t.amount.toLocaleString()}</td>
+                            </tr>
+                        `;
+                    });
+                }
 
                 container.innerHTML = `
                     <div class="bg-white min-h-screen p-5">
@@ -392,21 +447,22 @@
             let name = prompt("Store ka naya naam likhein:", storeName);
             if(name && name.trim() !== "") {
                 storeName = name.trim();
-                localStorage.setItem('adv_store_name', storeName);
-                render();
+                syncToCloud();
             }
         }
 
         function addNewCust() {
             let input = document.getElementById('custInput');
+            if(!input) return;
             let name = input.value.trim();
             if(!name) {
                 alert("Customer ka naam likhna lazmi hai!");
                 return;
             }
+            if(!customers) customers = [];
             customers.push({ name: name, transactions: [] });
             input.value = "";
-            render();
+            syncToCloud();
         }
 
         function openCustomerDetail(idx) {
@@ -448,17 +504,21 @@
                 return;
             }
 
-            let file = imgInput.files[0];
+            if(!customers[selectedCustomerIndex].transactions) {
+                customers[selectedCustomerIndex].transactions = [];
+            }
+
+            let file = imgInput && imgInput.files ? imgInput.files[0] : null;
             if (file) {
                 let reader = new FileReader();
                 reader.onload = function(e) {
                     customers[selectedCustomerIndex].transactions.push({ type, amount, details, image: e.target.result, date, txId });
-                    render();
+                    syncToCloud();
                 };
                 reader.readAsDataURL(file);
             } else {
                 customers[selectedCustomerIndex].transactions.push({ type, amount, details, image: '', date, txId });
-                render();
+                syncToCloud();
             }
         }
 
@@ -467,15 +527,13 @@
                 customers.splice(selectedCustomerIndex, 1);
                 currentView = 'home';
                 selectedCustomerIndex = null;
-                render();
+                syncToCloud();
             }
         }
 
         function switchTab(tab) {
             if(tab !== 'Khata') alert(`${tab} section par mazeed kaam jari hai!`);
         }
-
-        render();
     </script>
 </body>
 </html>
