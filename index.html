@@ -1,538 +1,300 @@
 <!DOCTYPE html>
-<html lang="ur" dir="ltr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dukaan Khata</title>
-    <!-- Tailwind CSS CDN -->
+    <title>Dukaan Khata - Store Ledger App</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-        // Firebase Configuration (Aap apni Firebase credentials yahan laga sakte hain ya default testing server use hoga)
-        const firebaseConfig = {
-            databaseURL: "https://dukaan-khata-default-rtdb.firebaseio.com/"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        window.db = db;
-        window.ref = ref;
-        window.set = set;
-        window.onValue = onValue;
-        window.push = push;
-        window.remove = remove;
-        
-        // Start App once Firebase loads
-        window.initFirebaseApp();
-    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans pb-24 flex justify-center">
+<body class="bg-gray-100 min-h-screen pb-24 text-gray-800">
 
-    <!-- Mobile Screen Wrapper -->
-    <div class="w-full max-w-md bg-gray-50 min-h-screen relative shadow-2xl flex flex-col justify-between">
+    <header class="bg-purple-950 text-white p-4 shadow-md sticky top-0 z-20">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div>
+                <h1 id="storeName" class="text-lg font-bold tracking-wide">Raza Super Store</h1>
+                <p class="text-xs text-purple-300">Tap kar k naam edit karein</p>
+            </div>
+            <button onclick="openEditStoreModal()" class="w-9 h-9 bg-purple-900 rounded-full flex items-center justify-center hover:bg-purple-800 transition shadow">
+                <i class="fa-solid fa-pen text-xs text-purple-200"></i>
+            </button>
+        </div>
+    </header>
 
-        <!-- Main Dynamic View Container -->
-        <div id="appContainer">
-            <div class="flex items-center justify-center h-screen text-gray-500 text-sm">
-                <i class="fa-solid fa-spinner fa-spin mr-2">Coonecting to Cloud...</i>
+    <main class="max-w-md mx-auto p-4 space-y-4">
+
+        <!-- Balance Summary Cards -->
+        <section class="grid grid-cols-2 gap-3">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                <div>
+                    <h2 id="totalMilna" class="text-emerald-600 text-xl font-bold">Rs 0</h2>
+                    <p class="text-gray-400 text-xs mt-1 font-medium">Mujhe Milna Hai</p>
+                </div>
+                <div class="mt-3 flex items-center text-xs text-emerald-600 font-semibold gap-1">
+                    <i class="fa-solid fa-arrow-trend-up"><span>Receivable</span></i>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                <div>
+                    <h2 id="totalDena" class="text-rose-500 text-xl font-bold">Rs 0</h2>
+                    <p class="text-gray-400 text-xs mt-1 font-medium">Mujhe Dena Hai</p>
+                </div>
+                <div class="mt-3 flex items-center text-xs text-rose-500 font-semibold gap-1">
+                    <i class="fa-solid fa-arrow-trend-down"><span>Payable</span></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- Add Customer Bar -->
+        <section class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-2">
+            <input type="text" id="newCustomerInput" placeholder="Naya customer ka naam" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 transition">
+            <button onclick="openAddCustomerModal()" class="bg-emerald-100 text-emerald-700 px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-emerald-200 transition whitespace-nowrap shadow-sm">
+                Add
+            </button>
+        </section>
+
+        <!-- Customers List Card -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-gray-800 text-sm tracking-wide">Customers</h3>
+                <span id="customerCount" class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">0 customers</span>
+            </div>
+            <div id="customerList" class="divide-y divide-gray-100">
+                <!-- Dynamically populated customer items -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Edit Store Modal -->
+    <div id="editStoreModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-xs p-5 shadow-xl transform transition-all">
+            <h3 class="text-base font-bold text-gray-800 mb-2">Edit Store Name</h3>
+            <p class="text-xs text-gray-500 mb-4">Apni dukaan ya business ka naya naam darj karein.</p>
+            <input type="text" id="modalStoreInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-4 focus:outline-none focus:border-purple-900">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModals()" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg font-medium">Cancel</button>
+                <button onclick="saveStoreName()" class="px-4 py-2 text-sm bg-purple-900 text-white rounded-lg font-medium hover:bg-purple-800">Save</button>
             </div>
         </div>
-
-        <!-- Bottom Navigation Bar -->
-        <div class="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-around py-2 shadow-lg z-50">
-            <button onclick="switchTab('Dashboard')" class="flex flex-col items-center text-gray-400 text-[11px]">
-                <i class="fa-solid fa-chart-line text-lg mb-0.5"></i> Dashboard
-            </button>
-            <button onclick="switchTab('Bill')" class="flex flex-col items-center text-gray-400 text-[11px]">
-                <i class="fa-solid fa-file-lines text-lg mb-0.5"></i> Bill
-            </button>
-            <button onclick="switchTab('Stock')" class="flex flex-col items-center text-gray-400 text-[11px]">
-                <i class="fa-solid fa-box text-lg mb-0.5"></i> Stock
-            </button>
-            <button onclick="switchTab('Khata')" class="flex flex-col items-center text-purple-950 font-bold text-[11px] border-t-2 border-purple-950 pt-0.5">
-                <i class="fa-solid fa-dollar-sign text-lg mb-0.5"></i> Khata
-            </button>
-            <button onclick="switchTab('Orders')" class="flex flex-col items-center text-gray-400 text-[11px]">
-                <i class="fa-solid fa-bars text-lg mb-0.5"></i> Orders
-            </button>
-        </div>
-
     </div>
 
-    <!-- Application Logic with Real-time Cloud Sync -->
+    <!-- Add/Edit Customer Modal -->
+    <div id="customerModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-xs p-5 shadow-xl transform transition-all">
+            <h3 id="modalTitle" class="text-base font-bold text-gray-800 mb-2">Add Customer</h3>
+            <p id="modalSubtitle" class="text-xs text-gray-500 mb-4">Customer ki details aur balance darj karein.</p>
+            
+            <div class="space-y-3 mb-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Customer Name</label>
+                    <input type="text" id="modalCustomerName" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Amount (Rs)</label>
+                    <input type="number" id="modalCustomerAmount" placeholder="e.g. 1500 (Positive = You'll get, Negative = You'll give)" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-600">
+                    <p class="text-[10px] text-gray-400 mt-1">Positive rakam matlab milna hai, negative matlab dena hai.</p>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <button id="deleteCustBtn" onclick="deleteCurrentCustomer()" class="text-xs text-rose-500 hover:text-rose-700 font-semibold hidden">Delete</button>
+                <div class="flex gap-2 ml-auto">
+                    <button onclick="closeModals()" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg font-medium">Cancel</button>
+                    <button onclick="saveCustomerData()" class="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20 shadow-lg">
+        <div class="max-w-md mx-auto flex justify-around py-2">
+            <button onclick="switchTab('Dashboard')" class="nav-btn flex flex-col items-center text-gray-400 text-xs transition hover:text-purple-900" data-tab="Dashboard">
+                <i class="fa-solid fa-chart-column text-lg mb-1"></i>
+                <span>Dashboard</span>
+            </button>
+            <button onclick="switchTab('Bill')" class="nav-btn flex flex-col items-center text-gray-400 text-xs transition hover:text-purple-900" data-tab="Bill">
+                <i class="fa-solid fa-file-invoice-dollar text-lg mb-1"></i>
+                <span>Bill</span>
+            </button>
+            <button onclick="switchTab('Stock')" class="nav-btn flex flex-col items-center text-gray-400 text-xs transition hover:text-purple-900" data-tab="Stock">
+                <i class="fa-solid fa-boxes-stacked text-lg mb-1"></i>
+                <span>Stock</span>
+            </button>
+            <button onclick="switchTab('Khata')" class="nav-btn flex flex-col items-center text-purple-950 font-bold text-xs pt-0.5 border-t-2 border-purple-950" data-tab="Khata">
+                <i class="fa-solid fa-wallet text-lg mb-1"></i>
+                <span>Khata</span>
+            </button>
+            <button onclick="switchTab('Orders')" class="nav-btn flex flex-col items-center text-gray-400 text-xs transition hover:text-purple-900" data-tab="Orders">
+                <i class="fa-solid fa-bag-shopping text-lg mb-1"></i>
+                <span>Orders</span>
+            </button>
+        </div>
+    </nav>
+
     <script>
-        let storeName = "Raza Super Store";
-        let customers = [];
-        let currentView = 'home'; 
-        let selectedCustomerIndex = null;
-        let selectedTxIndex = null;
+        let storeName = localStorage.getItem('dukaan_storeName') || "Raza Super Store";
+        let customers = JSON.parse(localStorage.getItem('dukaan_customers')) || [
+            { id: 1, name: "hadi", amount: 7931 }
+        ];
+        let editingIndex = null;
 
-        window.initFirebaseApp = function() {
-            const storeRef = window.ref(window.db, 'dukaan_data');
-            window.onValue(storeRef, (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    storeName = data.storeName || "Raza Super Store";
-                    customers = data.customers || [];
-                } else {
-                    // Default Initial Data
-                    customers = [
-                        { 
-                            name: "hadi", 
-                            transactions: [
-                                { type: 'diya', amount: 8000, details: 'Cash & Sugar', image: '', date: '2026-09-23', txId: 'TXN-98412' }
-                            ] 
-                        }
-                    ];
-                    syncToCloud();
-                }
-                render();
-            });
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStoreUI();
+            renderCustomers();
+        });
+
+        function updateStoreUI() {
+            document.getElementById('storeName').innerText = storeName;
+            localStorage.setItem('dukaan_storeName', storeName);
         }
 
-        function syncToCloud() {
-            if (!window.db) return;
-            const storeRef = window.ref(window.db, 'dukaan_data');
-            window.set(storeRef, {
-                storeName: storeName,
-                customers: customers
-            }).catch(err => console.error("Sync error:", err));
+        function openEditStoreModal() {
+            document.getElementById('modalStoreInput').value = storeName;
+            document.getElementById('editStoreModal').classList.remove('hidden');
         }
 
-        function getCustomerBalance(cust) {
-            let diya = 0;
-            let mila = 0;
-            if(cust.transactions) {
-                cust.transactions.forEach(t => {
-                    if(t.type === 'diya') diya += t.amount;
-                    if(t.type === 'mila') mila += t.amount;
+        function saveStoreName() {
+            let val = document.getElementById('modalStoreInput').value.trim();
+            if (val) {
+                storeName = val;
+                updateStoreUI();
+            }
+            closeModals();
+        }
+
+        function openAddCustomerModal() {
+            editingIndex = null;
+            let quickName = document.getElementById('newCustomerInput').value.trim();
+            document.getElementById('modalTitle').innerText = "Add Customer";
+            document.getElementById('modalSubtitle').innerText = "Naye customer ka naam aur balance darj karein.";
+            document.getElementById('modalCustomerName').value = quickName;
+            document.getElementById('modalCustomerAmount').value = "0";
+            document.getElementById('deleteCustBtn').classList.add('hidden');
+            document.getElementById('customerModal').classList.remove('hidden');
+        }
+
+        function openEditCustomerModal(index) {
+            editingIndex = index;
+            let cust = customers[index];
+            document.getElementById('modalTitle').innerText = "Edit Customer Khata";
+            document.getElementById('modalSubtitle').innerText = `${cust.name} ka khata update karein.`;
+            document.getElementById('modalCustomerName').value = cust.name;
+            document.getElementById('modalCustomerAmount').value = cust.amount;
+            document.getElementById('deleteCustBtn').classList.remove('hidden');
+            document.getElementById('customerModal').classList.remove('hidden');
+        }
+
+        function saveCustomerData() {
+            let name = document.getElementById('modalCustomerName').value.trim();
+            let amount = parseFloat(document.getElementById('modalCustomerAmount').value) || 0;
+
+            if (!name) {
+                showToast("Baraye meherbani customer ka naam likhein!");
+                return;
+            }
+
+            if (editingIndex === null) {
+                customers.push({ id: Date.now(), name, amount });
+                document.getElementById('newCustomerInput').value = "";
+            } else {
+                customers[editingIndex].name = name;
+                customers[editingIndex].amount = amount;
+            }
+
+            renderCustomers();
+            closeModals();
+        }
+
+        function deleteCurrentCustomer() {
+            if (editingIndex !== null) {
+                customers.splice(editingIndex, 1);
+                renderCustomers();
+                closeModals();
+            }
+        }
+
+        function closeModals() {
+            document.getElementById('editStoreModal').classList.add('hidden');
+            document.getElementById('customerModal').classList.add('hidden');
+            editingIndex = null;
+        }
+
+        function renderCustomers() {
+            localStorage.setItem('dukaan_customers', JSON.stringify(customers));
+            let listContainer = document.getElementById('customerList');
+            let totalMilna = 0;
+            let totalDena = 0;
+            let html = '';
+
+            if (customers.length === 0) {
+                html = `<div class="py-8 text-center text-gray-400 text-sm">Koi customer mojood nahi hai. Upar box mein naam likh kar add karein.</div>`;
+            } else {
+                customers.forEach((cust, index) => {
+                    if (cust.amount > 0) totalMilna += cust.amount;
+                    if (cust.amount < 0) totalDena += Math.abs(cust.amount);
+
+                    let isPositive = cust.amount >= 0;
+                    let amountColor = isPositive ? 'text-emerald-600' : 'text-rose-500';
+                    let formattedAmount = `Rs ${cust.amount.toLocaleString()}`;
+                    let firstLetter = cust.name ? cust.name.charAt(0).toUpperCase() : 'C';
+
+                    html += `
+                        <div onclick="openEditCustomerModal(${index})" class="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50/80 px-2 rounded-xl transition">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-purple-100 text-purple-900 rounded-full flex items-center justify-center font-bold text-sm shadow-sm">
+                                    ${firstLetter}
+                                </div>
+                                <div>
+                                    <span class="font-semibold text-gray-800 text-sm block">${cust.name}</span>
+                                    <span class="text-[11px] text-gray-400">Tap to edit ledger</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="text-right">
+                                    <span class="font-bold text-sm ${amountColor} block">${formattedAmount}</span>
+                                    <span class="text-[10px] text-gray-400">${isPositive ? 'Advance/Due' : 'Advance Paid'}</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
+                            </div>
+                        </div>
+                    `;
                 });
             }
-            return { balance: diya - mila, diya, mila };
+
+            listContainer.innerHTML = html;
+            document.getElementById('totalMilna').innerText = `Rs ${totalMilna.toLocaleString()}`;
+            document.getElementById('totalDena').innerText = `Rs ${totalDena.toLocaleString()}`;
+            document.getElementById('customerCount').innerText = `${customers.length} customer${customers.length === 1 ? '' : 's'}`;
         }
 
-        function render() {
-            let container = document.getElementById('appContainer');
-            if(!container) return;
-
-            if (currentView === 'home') {
-                let totalMilna = 0;
-                let totalDena = 0;
-
-                let listHTML = '';
-                if (customers.length === 0) {
-                    listHTML = `<p class="text-gray-400 text-center py-4 text-xs">Koi customer mojood nahi hai.</p>`;
-                } else {
-                    customers.forEach((cust, idx) => {
-                        let res = getCustomerBalance(cust);
-                        if (res.balance > 0) totalMilna += res.balance;
-                        if (res.balance < 0) totalDena += Math.abs(res.balance);
-
-                        let color = res.balance >= 0 ? 'text-emerald-600' : 'text-amber-600';
-                        listHTML += `
-                            <div onclick="openCustomerDetail(${idx})" class="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition rounded-xl px-1">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center font-bold text-sm">
-                                        ${cust.name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <span class="font-medium text-gray-800 text-sm">${cust.name}</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="font-bold text-sm ${color}">Rs ${res.balance.toLocaleString()}</span>
-                                    <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
-
-                container.innerHTML = `
-                    <div>
-                        <!-- Header Bar -->
-                        <div class="bg-white px-4 py-3 flex justify-between items-center border-b border-gray-100 text-gray-700 text-sm">
-                            <div class="flex items-center gap-1 font-medium cursor-pointer">Dukaan Khata (Cloud) <i class="fa-solid fa-cloud text-emerald-500 text-xs"></i></div>
-                            <div class="flex items-center gap-4 text-gray-500">
-                                <i class="fa-regular fa-comment-dots text-lg"></i>
-                                <i class="fa-solid fa-expand text-sm"></i>
-                                <i class="fa-solid fa-xmark text-lg"></i>
-                            </div>
-                        </div>
-
-                        <!-- Store Banner -->
-                        <div class="bg-purple-950 text-white p-5 m-3 rounded-2xl shadow-md relative">
-                            <div class="flex items-start gap-3">
-                                <div class="bg-purple-800 bg-opacity-60 p-3 rounded-xl flex items-center justify-center">
-                                    <i class="fa-solid fa-store text-xl text-purple-200"></i>
-                                </div>
-                                <div>
-                                    <h1 class="text-xl font-bold tracking-wide">${storeName}</h1>
-                                    <p class="text-xs text-purple-300 mt-0.5 cursor-pointer hover:underline" onclick="editStore()">Tap kar ke naam edit karein</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Dashboard Cards -->
-                        <div class="px-3">
-                            <div class="grid grid-cols-2 gap-3 mb-3">
-                                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                                    <div class="text-emerald-600 text-xl font-bold">Rs ${totalMilna.toLocaleString()}</div>
-                                    <div class="text-gray-400 text-xs mt-1">Mujhe Milna Hai</div>
-                                </div>
-                                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                                    <div class="text-amber-600 text-xl font-bold">Rs ${totalDena.toLocaleString()}</div>
-                                    <div class="text-gray-400 text-xs mt-1">Mujhe Dena Hai</div>
-                                </div>
-                            </div>
-
-                            <!-- Add Input -->
-                            <div class="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 mb-4">
-                                <input type="text" id="custInput" placeholder="Naya customer ka naam" class="w-full px-3 py-2 text-sm bg-transparent focus:outline-none text-gray-700 placeholder-gray-400">
-                                <button onclick="addNewCust()" class="bg-emerald-100 text-emerald-700 px-5 py-2 rounded-xl font-semibold text-sm hover:bg-emerald-200 transition">Add</button>
-                            </div>
-
-                            <!-- Customers Box -->
-                            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-10">
-                                <h2 class="text-gray-900 font-bold text-sm mb-3">Customers</h2>
-                                <div class="divide-y divide-gray-100">${listHTML}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } else if (currentView === 'detail') {
-                let cust = customers[selectedCustomerIndex];
-                let res = getCustomerBalance(cust);
-                let today = new Date().toISOString().split('T')[0];
-
-                let totalSum = res.diya + res.mila;
-                let diyaAngle = totalSum > 0 ? (res.diya / totalSum) * 360 : 360;
-                let balanceText = Math.abs(res.balance).toLocaleString();
-                let balanceLabel = res.balance >= 0 ? "Milna Hai" : "Dena Hai";
-                let balanceColorClass = res.balance >= 0 ? "text-emerald-600" : "text-amber-600";
-
-                let historyHTML = '';
-                if(!cust.transactions || cust.transactions.length === 0) {
-                    historyHTML = `<p class="text-gray-400 text-center py-4 text-xs">Abhi koi transaction nahi hai.</p>`;
-                } else {
-                    [...cust.transactions].reverse().forEach((t, revIdx) => {
-                        let actualIdx = cust.transactions.length - 1 - revIdx;
-                        let typeText = t.type === 'diya' ? 'Aapne Diya' : 'Aapko Mila';
-                        let typeColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
-                        let imgTag = t.image ? `<img src="${t.image}" class="w-10 h-10 object-cover rounded-lg border mt-1">` : '';
-                        
-                        historyHTML += `
-                            <div class="py-3 border-b border-gray-100 flex justify-between items-center">
-                                <div>
-                                    <div class="font-bold text-sm text-gray-800">${typeText} <span class="text-xs font-normal text-gray-500">(${t.details || 'Cash/Item'})</span></div>
-                                    <div class="text-xs text-gray-400 mt-0.5">${t.date}</div>
-                                    ${imgTag}
-                                </div>
-                                <div class="flex flex-col items-end gap-2">
-                                    <span class="font-bold text-sm ${typeColor}">Rs ${t.amount.toLocaleString()}</span>
-                                    <button onclick="openTxReceipt(${actualIdx})" class="px-2.5 py-1 bg-purple-50 text-purple-900 rounded-lg text-[11px] font-bold border border-purple-200 hover:bg-purple-100 transition flex items-center gap-1">
-                                        <i class="fa-solid fa-receipt text-xs"></i> Statement
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
-
-                container.innerHTML = `
-                    <div>
-                        <!-- Top Bar with Back & Delete -->
-                        <div class="bg-white px-4 py-3 flex justify-between items-center border-b border-gray-100">
-                            <button onclick="backToHome()" class="flex items-center gap-2 text-gray-700 font-medium text-sm">
-                                <i class="fa-solid fa-chevron-left"></i> ${cust.name}
-                            </button>
-                            <button onclick="deleteCustomer()" class="w-9 h-9 bg-red-50 text-red-500 rounded-xl flex items-center justify-center hover:bg-red-100" title="Customer Delete Karein">
-                                <i class="fa-solid fa-trash-can text-sm"></i>
-                            </button>
-                        </div>
-
-                        <div class="p-3">
-                            <!-- Circular Donut Chart Card -->
-                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center mb-3">
-                                <div class="relative w-44 h-44 rounded-full flex items-center justify-center shadow-inner" 
-                                     style="background: conic-gradient(#10b981 0deg ${diyaAngle}deg, #d97706 ${diyaAngle}deg 360deg);">
-                                    <div class="absolute w-32 h-32 bg-white rounded-full flex flex-col items-center justify-center shadow-sm">
-                                        <div class="text-base font-extrabold ${balanceColorClass}">Rs ${balanceText}</div>
-                                        <div class="text-gray-400 text-[11px] font-medium mt-0.5">${balanceLabel}</div>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-center justify-center gap-6 mt-5 text-xs">
-                                    <div class="flex items-center gap-1.5 font-medium text-gray-700">
-                                        <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
-                                        <span>Diya: <strong class="text-emerald-600">Rs ${res.diya.toLocaleString()}</strong></span>
-                                    </div>
-                                    <div class="flex items-center gap-1.5 font-medium text-gray-700">
-                                        <span class="w-3 h-3 rounded-full bg-amber-600 inline-block"></span>
-                                        <span>Mila: <strong class="text-amber-600">Rs ${res.mila.toLocaleString()}</strong></span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Input Form -->
-                            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
-                                <div class="mb-3">
-                                    <label class="text-xs text-gray-500 font-medium">Amount (Rs)</label>
-                                    <input type="number" id="txAmount" placeholder="e.g. 1000" class="w-full mt-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-600">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="text-xs text-gray-500 font-medium">Item Details / Kiya Diya (e.g. Sugar, Cash)</label>
-                                    <input type="text" id="txDetails" placeholder="Item ya Cash ka naam likhein" class="w-full mt-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-600">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="text-xs text-gray-500 font-medium">Product Picture (Camera se banayein)</label>
-                                    <div class="mt-1 flex items-center gap-2">
-                                        <label class="w-full cursor-pointer bg-purple-50 border border-purple-200 text-purple-900 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-purple-100 transition">
-                                            <i class="fa-solid fa-camera text-base"></i> Camera kholen / Tasveer Lein
-                                            <input type="file" id="txImage" accept="image/*" capture="environment" class="hidden">
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="mb-4">
-                                    <label class="text-xs text-gray-500 font-medium">Date</label>
-                                    <input type="date" id="txDate" value="${today}" class="w-full mt-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none">
-                                </div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <button onclick="addTransaction('diya')" class="bg-emerald-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-emerald-700 transition shadow-sm">Aapne Diya</button>
-                                    <button onclick="addTransaction('mila')" class="bg-amber-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-amber-700 transition shadow-sm">Aapko Mila</button>
-                                </div>
-                            </div>
-
-                            <!-- Full Ledger Statement Button -->
-                            <div class="bg-white p-3 rounded-2xl shadow-sm border border-purple-200 mb-4 text-center cursor-pointer hover:bg-purple-50 transition" onclick="openFullStatement()">
-                                <span class="text-purple-950 font-bold text-xs flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-file-invoice text-sm"></i> Poori Ledger Statement Dekhein
-                                </span>
-                            </div>
-
-                            <!-- History Section -->
-                            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-10">
-                                <h3 class="font-bold text-gray-800 text-sm mb-2">History</h3>
-                                <div>${historyHTML}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } else if (currentView === 'receipt') {
-                let cust = customers[selectedCustomerIndex];
-                let t = cust.transactions[selectedTxIndex];
-                let typeText = t.type === 'diya' ? 'Aapne Diya (Udhar)' : 'Aapko Mila (Payment)';
-                let amountColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
-                let imgHtml = t.image ? `<img src="${t.image}" class="w-full max-h-64 object-cover rounded-xl border mt-3 shadow-sm">` : '';
-
-                container.innerHTML = `
-                    <div class="bg-white min-h-screen p-6 flex flex-col justify-between">
-                        <div>
-                            <!-- Header -->
-                            <div class="flex justify-between items-center border-b pb-3 mb-5">
-                                <h2 class="font-bold text-base text-purple-950">${storeName}</h2>
-                                <button onclick="currentView='detail'; render();" class="w-8 h-8 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center font-bold">
-                                    <i class="fa-solid fa-xmark"></i>
-                                </button>
-                            </div>
-
-                            <!-- Digital Receipt Card -->
-                            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5 shadow-sm text-center">
-                                <div class="w-12 h-12 bg-purple-100 text-purple-900 rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-bold">
-                                    <i class="fa-solid fa-check"></i>
-                                </div>
-                                <h3 class="text-xs text-gray-400 uppercase tracking-widest font-semibold">Transaction Receipt</h3>
-                                <div class="text-2xl font-extrabold ${amountColor} mt-2">Rs ${t.amount.toLocaleString()}</div>
-                                <div class="text-xs text-gray-500 mt-1 font-medium">${typeText}</div>
-
-                                <div class="mt-6 text-left border-t border-gray-200 pt-4 text-xs space-y-2">
-                                    <div class="flex justify-between"><span class="text-gray-400">Customer Name:</span> <strong class="text-gray-800">${cust.name}</strong></div>
-                                    <div class="flex justify-between"><span class="text-gray-400">Item / Details:</span> <strong class="text-gray-800">${t.details || 'N/A'}</strong></div>
-                                    <div class="flex justify-between"><span class="text-gray-400">Transaction ID:</span> <strong class="text-gray-800">${t.txId}</strong></div>
-                                    <div class="flex justify-between"><span class="text-gray-400">Date & Time:</span> <strong class="text-gray-800">${t.date}</strong></div>
-                                </div>
-
-                                <div class="mt-4 text-left">
-                                    <span class="text-xs text-gray-400 font-medium">Product Picture:</span>
-                                    ${imgHtml ? imgHtml : '<div class="text-xs text-gray-400 italic mt-1">Koi tasveer maujood nahi hai.</div>'}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="mt-6 space-y-2">
-                            <button onclick="window.print()" class="w-full py-3 bg-purple-950 text-white rounded-xl font-bold text-sm shadow hover:bg-purple-900 transition flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-share-nodes"></i> Receipt Save / Share Karein
-                            </button>
-                            <button onclick="currentView='detail'; render();" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs hover:bg-gray-200 transition">
-                                Wapas Jayein
-                            </button>
-                        </div>
-                    </div>
-                `;
-            } else if (currentView === 'fullStatement') {
-                let cust = customers[selectedCustomerIndex];
-                let res = getCustomerBalance(cust);
-
-                let statementRows = '';
-                if(cust.transactions) {
-                    cust.transactions.forEach((t, i) => {
-                        let typeText = t.type === 'diya' ? 'Aapne Diya' : 'Aapko Mila';
-                        let amountColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
-                        let imgHtml = t.image ? `<img src="${t.image}" class="w-10 h-10 object-cover rounded-lg border mt-1">` : '-';
-                        
-                        statementRows += `
-                            <tr class="border-b border-gray-100">
-                                <td class="py-3 px-2 text-xs text-gray-600">${t.date}</td>
-                                <td class="py-3 px-2 text-xs font-bold text-gray-800">${typeText}<br><span class="font-normal text-gray-500">${t.details || '-'}</span></td>
-                                <td class="py-3 px-2 text-xs text-center">${imgHtml}</td>
-                                <td class="py-3 px-2 text-xs text-right font-bold ${amountColor}">Rs ${t.amount.toLocaleString()}</td>
-                            </tr>
-                        `;
-                    });
-                }
-
-                container.innerHTML = `
-                    <div class="bg-white min-h-screen p-5">
-                        <div class="flex justify-between items-center border-b pb-3 mb-4">
-                            <div>
-                                <h2 class="font-bold text-lg text-purple-950">${storeName}</h2>
-                                <p class="text-xs text-gray-400">Ledger Statement: <strong class="text-gray-700">${cust.name}</strong></p>
-                            </div>
-                            <button onclick="currentView='detail'; render();" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-xl text-xs font-semibold hover:bg-gray-200">
-                                <i class="fa-solid fa-xmark mr-1"></i> Band Karein
-                            </button>
-                        </div>
-
-                        <div class="bg-purple-50 p-4 rounded-2xl mb-4 border border-purple-100 flex justify-between items-center">
-                            <div>
-                                <div class="text-xs text-purple-800 font-medium">Net Balance Total:</div>
-                                <div class="text-xl font-bold text-purple-950">Rs ${Math.abs(res.balance).toLocaleString()} (${res.balance >= 0 ? 'Milna Hai' : 'Dena Hai'})</div>
-                            </div>
-                            <button onclick="window.print()" class="px-4 py-2 bg-purple-900 text-white rounded-xl text-xs font-bold shadow hover:bg-purple-800">
-                                <i class="fa-solid fa-print mr-1"></i> Print / Save
-                            </button>
-                        </div>
-
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-gray-50 text-gray-500 text-xs border-b">
-                                        <th class="py-2 px-2 font-semibold">Date</th>
-                                        <th class="py-2 px-2 font-semibold">Details</th>
-                                        <th class="py-2 px-2 font-semibold text-center">Pic</th>
-                                        <th class="py-2 px-2 font-semibold text-right">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${statementRows.length > 0 ? statementRows : `<tr><td colspan="4" class="text-center py-4 text-xs text-gray-400">Koi record nahi hai</td></tr>`}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="mt-8 text-center text-xs text-gray-400 border-t pt-4">
-                            Yeh computerized statement Dukaan Khata App se generate ki gayi hai.
-                        </div>
-                    </div>
-                `;
-            }
+        function switchTab(tabName) {
+            if (tabName === 'Khata') return;
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = "nav-btn flex flex-col items-center text-gray-400 text-xs transition hover:text-purple-900";
+            });
+            event.currentTarget.className = "nav-btn flex flex-col items-center text-purple-950 font-bold text-xs pt-0.5 border-t-2 border-purple-950";
+            showToast(`${tabName} module is ready for future transactions!`);
         }
 
-        function editStore() {
-            let name = prompt("Store ka naya naam likhein:", storeName);
-            if(name && name.trim() !== "") {
-                storeName = name.trim();
-                syncToCloud();
-            }
-        }
+        function showToast(message) {
+            let existingToast = document.getElementById('toastNotification');
+            if (existingToast) existingToast.remove();
 
-        function addNewCust() {
-            let input = document.getElementById('custInput');
-            if(!input) return;
-            let name = input.value.trim();
-            if(!name) {
-                alert("Customer ka naam likhna lazmi hai!");
-                return;
-            }
-            if(!customers) customers = [];
-            customers.push({ name: name, transactions: [] });
-            input.value = "";
-            syncToCloud();
-        }
+            let toast = document.createElement('div');
+            toast.id = 'toastNotification';
+            toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-4 py-2.5 rounded-full shadow-2xl z-50 transition-all duration-300';
+            toast.innerText = message;
+            document.body.appendChild(toast);
 
-        function openCustomerDetail(idx) {
-            selectedCustomerIndex = idx;
-            currentView = 'detail';
-            render();
-        }
-
-        function backToHome() {
-            currentView = 'home';
-            selectedCustomerIndex = null;
-            render();
-        }
-
-        function openTxReceipt(txIdx) {
-            selectedTxIndex = txIdx;
-            currentView = 'receipt';
-            render();
-        }
-
-        function openFullStatement() {
-            currentView = 'fullStatement';
-            render();
-        }
-
-        function addTransaction(type) {
-            let amtInput = document.getElementById('txAmount');
-            let detailsInput = document.getElementById('txDetails');
-            let dateInput = document.getElementById('txDate');
-            let imgInput = document.getElementById('txImage');
-
-            let amount = parseFloat(amtInput.value);
-            let details = detailsInput.value.trim() || (type === 'diya' ? 'Udhar / Item' : 'Payment Received');
-            let date = dateInput.value;
-            let txId = 'TXN-' + Math.floor(10000 + Math.random() * 90000);
-
-            if(!amount || amount <= 0) {
-                alert("Baraye meherbani sahi amount darj karein!");
-                return;
-            }
-
-            if(!customers[selectedCustomerIndex].transactions) {
-                customers[selectedCustomerIndex].transactions = [];
-            }
-
-            let file = imgInput && imgInput.files ? imgInput.files[0] : null;
-            if (file) {
-                let reader = new FileReader();
-                reader.onload = function(e) {
-                    customers[selectedCustomerIndex].transactions.push({ type, amount, details, image: e.target.result, date, txId });
-                    syncToCloud();
-                };
-                reader.readAsDataURL(file);
-            } else {
-                customers[selectedCustomerIndex].transactions.push({ type, amount, details, image: '', date, txId });
-                syncToCloud();
-            }
-        }
-
-        function deleteCustomer() {
-            if(confirm("Kya aap is customer ko mukammal delete karna chahte hain?")) {
-                customers.splice(selectedCustomerIndex, 1);
-                currentView = 'home';
-                selectedCustomerIndex = null;
-                syncToCloud();
-            }
-        }
-
-        function switchTab(tab) {
-            if(tab !== 'Khata') alert(`${tab} section par mazeed kaam jari hai!`);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
         }
     </script>
 </body>
