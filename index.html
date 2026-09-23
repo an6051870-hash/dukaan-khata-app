@@ -38,21 +38,22 @@
 
     </div>
 
-    <!-- JavaScript with Direct Camera Capture -->
+    <!-- JavaScript with Safe History & Individual Transaction Receipts -->
     <script>
         let storeName = localStorage.getItem('adv_store_name') || "Raza Super Store";
         let customers = JSON.parse(localStorage.getItem('adv_customers')) || [
             { 
                 name: "hadi", 
                 transactions: [
-                    { type: 'diya', amount: 8000, details: 'Cash & Sugar', image: '', date: '2026-09-23' },
-                    { type: 'mila', amount: 100, details: 'Cash Received', image: '', date: '2026-09-23' }
+                    { type: 'diya', amount: 8000, details: 'Cash & Sugar', image: '', date: '2026-09-23', txId: 'TXN-98412' },
+                    { type: 'mila', amount: 100, details: 'Cash Received', image: '', date: '2026-09-23', txId: 'TXN-98413' }
                 ] 
             }
         ];
 
-        let currentView = 'home';
+        let currentView = 'home'; // 'home', 'detail', 'receipt', 'fullStatement'
         let selectedCustomerIndex = null;
+        let selectedTxIndex = null;
 
         function getCustomerBalance(cust) {
             let diya = 0;
@@ -170,17 +171,20 @@
                         let actualIdx = cust.transactions.length - 1 - revIdx;
                         let typeText = t.type === 'diya' ? 'Aapne Diya' : 'Aapko Mila';
                         let typeColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
-                        let imgTag = t.image ? `<img src="${t.image}" class="w-12 h-12 object-cover rounded-lg border mt-1">` : '';
+                        let imgTag = t.image ? `<img src="${t.image}" class="w-10 h-10 object-cover rounded-lg border mt-1">` : '';
+                        
                         historyHTML += `
-                            <div class="py-3 flex justify-between items-start border-b border-gray-100">
+                            <div class="py-3 border-b border-gray-100 flex justify-between items-center">
                                 <div>
                                     <div class="font-bold text-sm text-gray-800">${typeText} <span class="text-xs font-normal text-gray-500">(${t.details || 'Cash/Item'})</span></div>
                                     <div class="text-xs text-gray-400 mt-0.5">${t.date}</div>
                                     ${imgTag}
                                 </div>
-                                <div class="flex items-center gap-3">
+                                <div class="flex flex-col items-end gap-2">
                                     <span class="font-bold text-sm ${typeColor}">Rs ${t.amount.toLocaleString()}</span>
-                                    <button onclick="deleteTx(${actualIdx})" class="w-7 h-7 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-100"><i class="fa-solid fa-xmark text-xs"></i></button>
+                                    <button onclick="openTxReceipt(${actualIdx})" class="px-2.5 py-1 bg-purple-50 text-purple-900 rounded-lg text-[11px] font-bold border border-purple-200 hover:bg-purple-100 transition flex items-center gap-1">
+                                        <i class="fa-solid fa-receipt text-xs"></i> Statement
+                                    </button>
                                 </div>
                             </div>
                         `;
@@ -194,7 +198,7 @@
                             <button onclick="backToHome()" class="flex items-center gap-2 text-gray-700 font-medium text-sm">
                                 <i class="fa-solid fa-chevron-left"></i> ${cust.name}
                             </button>
-                            <button onclick="deleteCustomer()" class="w-9 h-9 bg-red-50 text-red-500 rounded-xl flex items-center justify-center hover:bg-red-100">
+                            <button onclick="deleteCustomer()" class="w-9 h-9 bg-red-50 text-red-500 rounded-xl flex items-center justify-center hover:bg-red-100" title="Customer Delete Karein">
                                 <i class="fa-solid fa-trash-can text-sm"></i>
                             </button>
                         </div>
@@ -222,7 +226,7 @@
                                 </div>
                             </div>
 
-                            <!-- Input Form with Direct Camera Capture -->
+                            <!-- Input Form -->
                             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
                                 <div class="mb-3">
                                     <label class="text-xs text-gray-500 font-medium">Amount (Rs)</label>
@@ -251,10 +255,10 @@
                                 </div>
                             </div>
 
-                            <!-- Open Statement Button -->
-                            <div class="bg-white p-3 rounded-2xl shadow-sm border border-purple-200 mb-4 text-center cursor-pointer hover:bg-purple-50 transition" onclick="openStatementView()">
+                            <!-- Full Ledger Statement Button -->
+                            <div class="bg-white p-3 rounded-2xl shadow-sm border border-purple-200 mb-4 text-center cursor-pointer hover:bg-purple-50 transition" onclick="openFullStatement()">
                                 <span class="text-purple-950 font-bold text-xs flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-file-invoice text-sm"></i> Statement Open Karein (Client ke liye)
+                                    <i class="fa-solid fa-file-invoice text-sm"></i> Poori Ledger Statement Dekhein
                                 </span>
                             </div>
 
@@ -266,15 +270,67 @@
                         </div>
                     </div>
                 `;
-            } else if (currentView === 'statement') {
+            } else if (currentView === 'receipt') {
+                let cust = customers[selectedCustomerIndex];
+                let t = cust.transactions[selectedTxIndex];
+                let typeText = t.type === 'diya' ? 'Aapne Diya (Udhar)' : 'Aapko Mila (Payment)';
+                let amountColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
+                let imgHtml = t.image ? `<img src="${t.image}" class="w-full max-h-64 object-cover rounded-xl border mt-3 shadow-sm">` : '';
+
+                container.innerHTML = `
+                    <div class="bg-white min-h-screen p-6 flex flex-col justify-between">
+                        <div>
+                            <!-- Header -->
+                            <div class="flex justify-between items-center border-b pb-3 mb-5">
+                                <h2 class="font-bold text-base text-purple-950">${storeName}</h2>
+                                <button onclick="currentView='detail'; render();" class="w-8 h-8 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center font-bold">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+
+                            <!-- Digital Receipt Card (JazzCash/EasyPaisa style) -->
+                            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5 shadow-sm text-center">
+                                <div class="w-12 h-12 bg-purple-100 text-purple-900 rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-bold">
+                                    <i class="fa-solid fa-check"></i>
+                                </div>
+                                <h3 class="text-xs text-gray-400 uppercase tracking-widest font-semibold">Transaction Receipt</h3>
+                                <div class="text-2xl font-extrabold ${amountColor} mt-2">Rs ${t.amount.toLocaleString()}</div>
+                                <div class="text-xs text-gray-500 mt-1 font-medium">${typeText}</div>
+
+                                <div class="mt-6 text-left border-t border-gray-200 pt-4 text-xs space-y-2">
+                                    <div class="flex justify-between"><span class="text-gray-400">Customer Name:</span> <strong class="text-gray-800">${cust.name}</strong></div>
+                                    <div class="flex justify-between"><span class="text-gray-400">Item / Details:</span> <strong class="text-gray-800">${t.details || 'N/A'}</strong></div>
+                                    <div class="flex justify-between"><span class="text-gray-400">Transaction ID:</span> <strong class="text-gray-800">${t.txId}</strong></div>
+                                    <div class="flex justify-between"><span class="text-gray-400">Date & Time:</span> <strong class="text-gray-800">${t.date}</strong></div>
+                                </div>
+
+                                <div class="mt-4 text-left">
+                                    <span class="text-xs text-gray-400 font-medium">Product Picture:</span>
+                                    ${imgHtml ? imgHtml : '<div class="text-xs text-gray-400 italic mt-1">Koi tasveer maujood nahi hai.</div>'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="mt-6 space-y-2">
+                            <button onclick="window.print()" class="w-full py-3 bg-purple-950 text-white rounded-xl font-bold text-sm shadow hover:bg-purple-900 transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-share-nodes"></i> Receipt Save / Share Karein
+                            </button>
+                            <button onclick="currentView='detail'; render();" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs hover:bg-gray-200 transition">
+                                Wapas Jayein
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else if (currentView === 'fullStatement') {
                 let cust = customers[selectedCustomerIndex];
                 let res = getCustomerBalance(cust);
 
                 let statementRows = '';
                 cust.transactions.forEach((t, i) => {
-                    let typeText = t.type === 'diya' ? 'Aapne Diya (Udhar)' : 'Aapko Mila (Payment)';
+                    let typeText = t.type === 'diya' ? 'Aapne Diya' : 'Aapko Mila';
                     let amountColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
-                    let imgHtml = t.image ? `<img src="${t.image}" class="w-12 h-12 object-cover rounded-lg border mt-2">` : '<span class="text-gray-300 text-xs">No Image</span>';
+                    let imgHtml = t.image ? `<img src="${t.image}" class="w-10 h-10 object-cover rounded-lg border mt-1">` : '-';
                     
                     statementRows += `
                         <tr class="border-b border-gray-100">
@@ -288,36 +344,33 @@
 
                 container.innerHTML = `
                     <div class="bg-white min-h-screen p-5">
-                        <!-- Top Statement Header -->
                         <div class="flex justify-between items-center border-b pb-3 mb-4">
                             <div>
                                 <h2 class="font-bold text-lg text-purple-950">${storeName}</h2>
-                                <p class="text-xs text-gray-400">Customer Statement: <strong class="text-gray-700">${cust.name}</strong></p>
+                                <p class="text-xs text-gray-400">Ledger Statement: <strong class="text-gray-700">${cust.name}</strong></p>
                             </div>
                             <button onclick="currentView='detail'; render();" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-xl text-xs font-semibold hover:bg-gray-200">
                                 <i class="fa-solid fa-xmark mr-1"></i> Band Karein
                             </button>
                         </div>
 
-                        <!-- Summary Box -->
                         <div class="bg-purple-50 p-4 rounded-2xl mb-4 border border-purple-100 flex justify-between items-center">
                             <div>
                                 <div class="text-xs text-purple-800 font-medium">Net Balance Total:</div>
                                 <div class="text-xl font-bold text-purple-950">Rs ${Math.abs(res.balance).toLocaleString()} (${res.balance >= 0 ? 'Milna Hai' : 'Dena Hai'})</div>
                             </div>
                             <button onclick="window.print()" class="px-4 py-2 bg-purple-900 text-white rounded-xl text-xs font-bold shadow hover:bg-purple-800">
-                                <i class="fa-solid fa-print mr-1"></i> Print / Save PDF
+                                <i class="fa-solid fa-print mr-1"></i> Print / Save
                             </button>
                         </div>
 
-                        <!-- Itemized Table -->
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50 text-gray-500 text-xs border-b">
                                         <th class="py-2 px-2 font-semibold">Date</th>
-                                        <th class="py-2 px-2 font-semibold">Details / Item</th>
-                                        <th class="py-2 px-2 font-semibold text-center">Picture</th>
+                                        <th class="py-2 px-2 font-semibold">Details</th>
+                                        <th class="py-2 px-2 font-semibold text-center">Pic</th>
                                         <th class="py-2 px-2 font-semibold text-right">Amount</th>
                                     </tr>
                                 </thead>
@@ -368,8 +421,14 @@
             render();
         }
 
-        function openStatementView() {
-            currentView = 'statement';
+        function openTxReceipt(txIdx) {
+            selectedTxIndex = txIdx;
+            currentView = 'receipt';
+            render();
+        }
+
+        function openFullStatement() {
+            currentView = 'fullStatement';
             render();
         }
 
@@ -382,6 +441,7 @@
             let amount = parseFloat(amtInput.value);
             let details = detailsInput.value.trim() || (type === 'diya' ? 'Udhar / Item' : 'Payment Received');
             let date = dateInput.value;
+            let txId = 'TXN-' + Math.floor(10000 + Math.random() * 90000);
 
             if(!amount || amount <= 0) {
                 alert("Baraye meherbani sahi amount darj karein!");
@@ -392,19 +452,12 @@
             if (file) {
                 let reader = new FileReader();
                 reader.onload = function(e) {
-                    customers[selectedCustomerIndex].transactions.push({ type, amount, details, image: e.target.result, date });
+                    customers[selectedCustomerIndex].transactions.push({ type, amount, details, image: e.target.result, date, txId });
                     render();
                 };
                 reader.readAsDataURL(file);
             } else {
-                customers[selectedCustomerIndex].transactions.push({ type, amount, details, image: '', date });
-                render();
-            }
-        }
-
-        function deleteTx(txIdx) {
-            if(confirm("Kya aap is entry ko delete karna chahte hain?")) {
-                customers[selectedCustomerIndex].transactions.splice(txIdx, 1);
+                customers[selectedCustomerIndex].transactions.push({ type, amount, details, image: '', date, txId });
                 render();
             }
         }
@@ -419,7 +472,7 @@
         }
 
         function switchTab(tab) {
-            if(tab !== 'Khata') alert(`${tab} section par mazeed kaam jari hai! पुरानी app elements ko update kar diya gaya hai.`);
+            if(tab !== 'Khata') alert(`${tab} section par mazeed kaam jari hai!`);
         }
 
         render();
