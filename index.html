@@ -3,11 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dukaan Khata - Synced</title>
+    <title>Dukaan Khata - App</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- PWA Manifest & Meta Tags for Installable App -->
+    <meta name="theme-color" content="#581c87">
+    <link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22Dukaan%20Khata%22%2C%22short_name%22%3A%22Khata%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f3f4f6%22%2C%22theme_color%22%3A%22%23581c87%22%2C%22icons%22%3A%5B%5D%7D">
 </head>
 <body class="bg-gray-100 font-sans pb-24 flex justify-center">
 
@@ -38,9 +42,8 @@
 
     </div>
 
-    <!-- Application Script with Cross-Device Sync Bridge -->
+    <!-- Application Script with App Install Prompt Support -->
     <script>
-        // Unique channel key for Dukaan Khata sync across devices
         const SYNC_KEY = "dukaan_master_ledger_v2";
 
         let storeName = "Raza Super Store";
@@ -57,7 +60,6 @@
         let selectedCustomerIndex = null;
         let selectedTxIndex = null;
 
-        // Load data from localStorage or shared sync channel
         function loadAppData() {
             let savedData = localStorage.getItem(SYNC_KEY);
             if (savedData) {
@@ -69,13 +71,11 @@
             }
         }
 
-        // Save data and broadcast to keep devices updated
         function saveAppData() {
             let dataPacket = { storeName, customers, updatedAt: Date.now() };
             localStorage.setItem(SYNC_KEY, JSON.stringify(dataPacket));
         }
 
-        // Listen for storage changes if multiple tabs/windows are open
         window.addEventListener('storage', (event) => {
             if (event.key === SYNC_KEY) {
                 loadAppData();
@@ -137,10 +137,9 @@
                         <div class="bg-white px-4 py-3 flex justify-between items-center border-b border-gray-100 text-gray-700 text-sm">
                             <div class="flex items-center gap-1 font-medium cursor-pointer">Dukaan Khata <i class="fa-solid fa-chevron-down text-xs"></i></div>
                             <div class="flex items-center gap-3 text-gray-500">
-                                <button onclick="manualSync()" class="bg-purple-100 text-purple-900 px-2.5 py-1 rounded-lg text-xs font-bold hover:bg-purple-200 transition" title="Sync Data">
-                                    <i class="fa-solid fa-rotate mr-1"></i> Sync
+                                <button onclick="installAppPrompt()" class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg text-xs font-bold hover:bg-emerald-200 transition" title="App Install Karein">
+                                    <i class="fa-solid fa-download mr-1"></i> Install App
                                 </button>
-                                <i class="fa-regular fa-comment-dots text-lg"></i>
                                 <i class="fa-solid fa-xmark text-lg"></i>
                             </div>
                         </div>
@@ -425,10 +424,24 @@
             }
         }
 
-        function manualSync() {
-            loadAppData();
-            render();
-            alert("Data successfully synced!");
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+
+        function installAppPrompt() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+            } else {
+                alert("Aap apne browser ke menu (3 dots) par click kar ke 'Add to Home Screen' ya 'Install App' select karein taake yeh aapke phone mein app ki tarah install ho jaye!");
+            }
         }
 
         function editStore() {
@@ -519,7 +532,6 @@
             if(tab !== 'Khata') alert(`${tab} section par mazeed kaam jari hai!`);
         }
 
-        // Initial Load
         loadAppData();
         render();
     </script>
