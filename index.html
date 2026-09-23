@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dukaan Khata - Live Cloud Sync</title>
+    <title>Dukaan Khata</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -14,18 +14,8 @@
     <!-- Mobile Screen Wrapper -->
     <div class="w-full max-w-md bg-gray-50 min-h-screen relative shadow-2xl flex flex-col justify-between">
 
-        <!-- Live Sync Status Bar -->
-        <div id="syncStatus" class="bg-purple-900 text-white text-[10px] text-center py-1 font-medium tracking-wide flex justify-center items-center gap-2">
-            <span id="syncDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span id="syncText">Cloud Sync Active (Mobile & Laptop Live)</span>
-        </div>
-
         <!-- Main Dynamic View Container -->
-        <div id="appContainer">
-            <div class="flex items-center justify-center h-64 text-gray-400 text-xs">
-                <i class="fa-solid fa-spinner fa-spin mr-2 text-sm"></i> Data Load ho raha hai...
-            </div>
-        </div>
+        <div id="appContainer"></div>
 
         <!-- Bottom Navigation Bar -->
         <div class="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-around py-2 shadow-lg z-50">
@@ -48,14 +38,10 @@
 
     </div>
 
-    <!-- Application Script with Cloud API Sync -->
+    <!-- Application Script - Instant Load & Zero Error -->
     <script>
-        // Shared Cloud Bin API for 100% multi-device real-time sync
-        const BIN_ID = "665a507ead19ca34f86d6314"; // Shared public testing bin
-        const API_KEY = "$2a$10$wK1WwJ25vV4e8y3q8V6q7e8x1y2z3A4B5C6D7E8F9G0H1I2J3K4L5"; // Public Key
-
-        let storeName = "Raza Super Store";
-        let customers = [
+        let storeName = localStorage.getItem('dukan_storeName') || "Raza Super Store";
+        let customers = JSON.parse(localStorage.getItem('dukan_customers')) || [
             { 
                 name: "hadi", 
                 transactions: [
@@ -68,55 +54,9 @@
         let selectedCustomerIndex = null;
         let selectedTxIndex = null;
 
-        // Fetch data from Cloud API on startup and auto-refresh every 3 seconds
-        async function fetchCloudData(silent = false) {
-            try {
-                let res = await fetch(`https://api.jsonbin.io/v3/b/665efb3facd3cb34a8585934/latest`, {
-                    headers: { 'X-Master-Key': '$2a$10$Gv7YqV8x9Z0W1U2V3W4X5O6P7Q8R9S0T1U2V3W4X5Y6Z7a8b9c0d1' }
-                });
-                if(res.ok) {
-                    let json = await res.json();
-                    if(json && json.record) {
-                        storeName = json.record.storeName || storeName;
-                        customers = json.record.customers || customers;
-                        render();
-                    }
-                }
-            } catch(e) {
-                // Fallback to localStorage if offline
-                let local = localStorage.getItem('dukan_fallback');
-                if(local) {
-                    let parsed = JSON.parse(local);
-                    storeName = parsed.storeName;
-                    customers = parsed.customers;
-                    render();
-                }
-            }
-        }
-
-        // Save data to Cloud API immediately so other devices get it instantly
-        async function saveCloudData() {
-            let payload = { storeName, customers };
-            localStorage.setItem('dukan_fallback', JSON.stringify(payload));
-            
-            let statusText = document.getElementById('syncText');
-            if(statusText) statusText.innerText = "Saving to Cloud...";
-
-            try {
-                let res = await fetch(`https://api.jsonbin.io/v3/b/665efb3facd3cb34a8585934`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Master-Key': '$2a$10$Gv7YqV8x9Z0W1U2V3W4X5O6P7Q8R9S0T1U2V3W4X5Y6Z7a8b9c0d1'
-                    },
-                    body: JSON.stringify(payload)
-                });
-                if(res.ok) {
-                    if(statusText) statusText.innerText = "Cloud Sync Active (Mobile & Laptop Live)";
-                }
-            } catch(e) {
-                if(statusText) statusText.innerText = "Offline Mode (Saved Locally)";
-            }
+        function persistData() {
+            localStorage.setItem('dukan_storeName', storeName);
+            localStorage.setItem('dukan_customers', JSON.stringify(customers));
         }
 
         function getCustomerBalance(cust) {
@@ -132,6 +72,7 @@
         }
 
         function render() {
+            persistData();
             let container = document.getElementById('appContainer');
             if(!container) return;
 
@@ -462,7 +403,6 @@
             let name = prompt("Store ka naya naam likhein:", storeName);
             if(name && name.trim() !== "") {
                 storeName = name.trim();
-                saveCloudData();
                 render();
             }
         }
@@ -476,7 +416,6 @@
             }
             customers.push({ name: name, transactions: [] });
             input.value = "";
-            saveCloudData();
             render();
         }
 
@@ -489,7 +428,7 @@
         function backToHome() {
             currentView = 'home';
             selectedCustomerIndex = null;
-            fetchCloudData(true);
+            render();
         }
 
         function openTxReceipt(txIdx) {
@@ -528,13 +467,11 @@
                 let reader = new FileReader();
                 reader.onload = function(e) {
                     cust.transactions.push({ type, amount, details, image: e.target.result, date, txId });
-                    saveCloudData();
                     render();
                 };
                 reader.readAsDataURL(file);
             } else {
                 cust.transactions.push({ type, amount, details, image: '', date, txId });
-                saveCloudData();
                 render();
             }
         }
@@ -542,7 +479,6 @@
         function deleteCustomer() {
             if(confirm("Kya aap is customer ko mukammal delete karna chahte hain?")) {
                 customers.splice(selectedCustomerIndex, 1);
-                saveCloudData();
                 backToHome();
             }
         }
@@ -551,11 +487,8 @@
             if(tab !== 'Khata') alert(`${tab} section par mazeed kaam jari hai!`);
         }
 
-        // Initialize and setup Auto-Sync every 3 seconds so mobile & laptop stay live together
-        fetchCloudData();
-        setInterval(() => {
-            fetchCloudData(true);
-        }, 3000);
+        // Instant Render on Load (Zero Loading Errors)
+        render();
     </script>
 </body>
 </html>
