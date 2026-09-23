@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Naya Dukaan Khata</title>
+    <title>Dukaan Khata</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -14,67 +14,13 @@
     <!-- Mobile Screen Wrapper -->
     <div class="w-full max-w-md bg-gray-50 min-h-screen relative shadow-2xl flex flex-col justify-between">
 
-        <!-- Top Header Section -->
-        <div>
-            <!-- Top App Bar -->
-            <div class="bg-white px-4 py-3 flex justify-between items-center border-b border-gray-100 text-gray-700 text-sm">
-                <div class="flex items-center gap-1 font-medium cursor-pointer">
-                    Dukaan Khata <i class="fa-solid fa-chevron-down text-xs"></i>
-                </div>
-                <div class="flex items-center gap-4 text-gray-500">
-                    <i class="fa-regular fa-comment-dots text-lg"></i>
-                    <i class="fa-solid fa-expand text-sm"></i>
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </div>
-            </div>
-
-            <!-- Store Banner -->
-            <div class="bg-purple-950 text-white p-5 m-3 rounded-2xl shadow-md relative">
-                <div class="flex items-start gap-3">
-                    <div class="bg-purple-800 bg-opacity-60 p-3 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-store text-xl text-purple-200"></i>
-                    </div>
-                    <div>
-                        <h1 id="storeTitle" class="text-xl font-bold tracking-wide">Raza Super Store</h1>
-                        <p class="text-xs text-purple-300 mt-0.5 cursor-pointer hover:underline" onclick="editStoreName()">Tap kar ke naam edit karein</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Dashboard Content -->
-            <div class="px-3">
-                <!-- Two Balance Cards -->
-                <div class="grid grid-cols-2 gap-3 mb-3">
-                    <!-- Mujhe Milna Hai -->
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                        <div id="milnaAmount" class="text-emerald-600 text-xl font-bold">Rs 0</div>
-                        <div class="text-gray-400 text-xs mt-1">Mujhe Milna Hai</div>
-                    </div>
-                    <!-- Mujhe Dena Hai -->
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                        <div id="denaAmount" class="text-amber-600 text-xl font-bold">Rs 0</div>
-                        <div class="text-gray-400 text-xs mt-1">Mujhe Dena Hai</div>
-                    </div>
-                </div>
-
-                <!-- Add Customer Input Bar -->
-                <div class="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 mb-4">
-                    <input type="text" id="customerInput" placeholder="Naya customer ka naam" class="w-full px-3 py-2 text-sm bg-transparent focus:outline-none text-gray-700 placeholder-gray-400">
-                    <button onclick="addCustomer()" class="bg-emerald-100 text-emerald-700 px-5 py-2 rounded-xl font-semibold text-sm hover:bg-emerald-200 transition">Add</button>
-                </div>
-
-                <!-- Customers Section -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                    <h2 class="text-gray-900 font-bold text-sm mb-3">Customers</h2>
-                    <div id="customersList" class="divide-y divide-gray-100">
-                        <!-- Dynamic Customer Item -->
-                    </div>
-                </div>
-            </div>
+        <!-- Main Dynamic View Container -->
+        <div id="appContainer">
+            <!-- Content will be loaded dynamically via JS -->
         </div>
 
         <!-- Bottom Navigation Bar -->
-        <div class="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-around py-2 shadow-lg">
+        <div class="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-around py-2 shadow-lg z-50">
             <button onclick="switchTab('Dashboard')" class="flex flex-col items-center text-gray-400 text-[11px]">
                 <i class="fa-solid fa-chart-line text-lg mb-0.5"></i> Dashboard
             </button>
@@ -94,93 +40,287 @@
 
     </div>
 
-    <!-- JavaScript for Interactivity -->
+    <!-- JavaScript for Advanced Khata & History -->
     <script>
-        let storeName = localStorage.getItem('new_store_name') || "Raza Super Store";
-        let customers = JSON.parse(localStorage.getItem('new_customers')) || [];
+        let storeName = localStorage.getItem('adv_store_name') || "Raza Super Store";
+        // Customers structure with history support
+        let customers = JSON.parse(localStorage.getItem('adv_customers')) || [
+            { 
+                name: "hadi", 
+                transactions: [
+                    { type: 'diya', amount: 8000, date: '2026-09-23' },
+                    { type: 'mila', amount: 69, date: '2026-09-23' }
+                ] 
+            }
+        ];
 
-        document.getElementById('storeTitle').innerText = storeName;
+        let currentView = 'home'; // 'home' or 'detail'
+        let selectedCustomerIndex = null;
 
-        function editStoreName() {
-            let newName = prompt("Store ka naya naam likhein:", storeName);
-            if (newName && newName.trim() !== "") {
-                storeName = newName.trim();
-                localStorage.setItem('new_store_name', storeName);
-                document.getElementById('storeTitle').innerText = storeName;
+        function getCustomerBalance(cust) {
+            let diya = 0;
+            let mila = 0;
+            cust.transactions.forEach(t => {
+                if(t.type === 'diya') diya += t.amount;
+                if(t.type === 'mila') mila += t.amount;
+            });
+            return { balance: diya - mila, diya, mila };
+        }
+
+        function render() {
+            localStorage.setItem('adv_customers', JSON.stringify(customers));
+            let container = document.getElementById('appContainer');
+
+            if (currentView === 'home') {
+                let totalMilna = 0;
+                let totalDena = 0;
+
+                let listHTML = '';
+                if (customers.length === 0) {
+                    listHTML = `<p class="text-gray-400 text-center py-4 text-xs">Koi customer mojood nahi hai.</p>`;
+                } else {
+                    customers.forEach((cust, idx) => {
+                        let res = getCustomerBalance(cust);
+                        if (res.balance > 0) totalMilna += res.balance;
+                        if (res.balance < 0) totalDena += Math.abs(res.balance);
+
+                        let color = res.balance >= 0 ? 'text-emerald-600' : 'text-amber-600';
+                        listHTML += `
+                            <div onclick="openCustomerDetail(${idx})" class="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition rounded-xl px-1">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center font-bold text-sm">
+                                        ${cust.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span class="font-medium text-gray-800 text-sm">${cust.name}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-sm ${color}">Rs ${res.balance.toLocaleString()}</span>
+                                    <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                container.innerHTML = `
+                    <div>
+                        <!-- Header Bar -->
+                        <div class="bg-white px-4 py-3 flex justify-between items-center border-b border-gray-100 text-gray-700 text-sm">
+                            <div class="flex items-center gap-1 font-medium cursor-pointer">Dukaan Khata <i class="fa-solid fa-chevron-down text-xs"></i></div>
+                            <div class="flex items-center gap-4 text-gray-500">
+                                <i class="fa-regular fa-comment-dots text-lg"></i>
+                                <i class="fa-solid fa-expand text-sm"></i>
+                                <i class="fa-solid fa-xmark text-lg"></i>
+                            </div>
+                        </div>
+
+                        <!-- Store Banner -->
+                        <div class="bg-purple-950 text-white p-5 m-3 rounded-2xl shadow-md relative">
+                            <div class="flex items-start gap-3">
+                                <div class="bg-purple-800 bg-opacity-60 p-3 rounded-xl flex items-center justify-center">
+                                    <i class="fa-solid fa-store text-xl text-purple-200"></i>
+                                </div>
+                                <div>
+                                    <h1 class="text-xl font-bold tracking-wide">${storeName}</h1>
+                                    <p class="text-xs text-purple-300 mt-0.5 cursor-pointer hover:underline" onclick="editStore()">Tap kar ke naam edit karein</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dashboard Cards -->
+                        <div class="px-3">
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                    <div class="text-emerald-600 text-xl font-bold">Rs ${totalMilna.toLocaleString()}</div>
+                                    <div class="text-gray-400 text-xs mt-1">Mujhe Milna Hai</div>
+                                </div>
+                                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                    <div class="text-amber-600 text-xl font-bold">Rs ${totalDena.toLocaleString()}</div>
+                                    <div class="text-gray-400 text-xs mt-1">Mujhe Dena Hai</div>
+                                </div>
+                            </div>
+
+                            <!-- Add Input -->
+                            <div class="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 mb-4">
+                                <input type="text" id="custInput" placeholder="Naya customer ka naam" class="w-full px-3 py-2 text-sm bg-transparent focus:outline-none text-gray-700 placeholder-gray-400">
+                                <button onclick="addNewCust()" class="bg-emerald-100 text-emerald-700 px-5 py-2 rounded-xl font-semibold text-sm hover:bg-emerald-200 transition">Add</button>
+                            </div>
+
+                            <!-- Customers Box -->
+                            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-10">
+                                <h2 class="text-gray-900 font-bold text-sm mb-3">Customers</h2>
+                                <div class="divide-y divide-gray-100">${listHTML}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentView === 'detail') {
+                let cust = customers[selectedCustomerIndex];
+                let res = getCustomerBalance(cust);
+                let today = new Date().toISOString().split('T')[0];
+
+                let historyHTML = '';
+                if(cust.transactions.length === 0) {
+                    historyHTML = `<p class="text-gray-400 text-center py-4 text-xs">Abhi koi transaction nahi hai.</p>`;
+                } else {
+                    // Reverse to show latest first
+                    [...cust.transactions].reverse().forEach((t, revIdx) => {
+                        let actualIdx = cust.transactions.length - 1 - revIdx;
+                        let typeText = t.type === 'diya' ? 'Aapne Diya' : 'Aapko Mila';
+                        let typeColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
+                        historyHTML += `
+                            <div class="py-3 flex justify-between items-center border-b border-gray-100">
+                                <div>
+                                    <div class="font-bold text-sm text-gray-800">${typeText}</div>
+                                    <div class="text-xs text-gray-400">${t.date}</div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="font-bold text-sm ${typeColor}">Rs ${t.amount.toLocaleString()}</span>
+                                    <button onclick="deleteTx(${actualIdx})" class="w-7 h-7 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-100"><i class="fa-solid fa-xmark text-xs"></i></button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                container.innerHTML = `
+                    <div>
+                        <!-- Top Bar with Back & Delete -->
+                        <div class="bg-white px-4 py-3 flex justify-between items-center border-b border-gray-100">
+                            <button onclick="backToHome()" class="flex items-center gap-2 text-gray-700 font-medium text-sm">
+                                <i class="fa-solid fa-chevron-left"></i> ${cust.name}
+                            </button>
+                            <button onclick="deleteCustomer()" class="w-9 h-9 bg-red-50 text-red-500 rounded-xl flex items-center justify-center hover:bg-red-100">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
+                            </button>
+                        </div>
+
+                        <div class="p-3">
+                            <!-- Balance Card -->
+                            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-center mb-3">
+                                <div class="text-2xl font-bold text-emerald-600">Rs ${res.balance.toLocaleString()}</div>
+                                <div class="text-gray-400 text-xs mt-1">Aapko Milna Hai</div>
+                            </div>
+
+                            <!-- Input Form (Diya / Mila) -->
+                            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
+                                <div class="mb-3">
+                                    <label class="text-xs text-gray-500 font-medium">Amount (Rs)</label>
+                                    <input type="number" id="txAmount" placeholder="e.g. 1000" class="w-full mt-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-600">
+                                </div>
+                                <div class="mb-4">
+                                    <label class="text-xs text-gray-500 font-medium">Date</label>
+                                    <div class="relative mt-1">
+                                        <input type="date" id="txDate" value="${today}" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button onclick="addTransaction('diya')" class="bg-emerald-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-emerald-700 transition shadow-sm">Aapne Diya</button>
+                                    <button onclick="addTransaction('mila')" class="bg-amber-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-amber-700 transition shadow-sm">Aapko Mila</button>
+                                </div>
+                            </div>
+
+                            <!-- Graph / Summary Breakdown -->
+                            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
+                                <div class="font-bold text-gray-800 text-sm mb-3">Hisab ka Breakdown</div>
+                                <div class="flex justify-between text-xs py-1 border-b border-gray-50">
+                                    <span class="text-emerald-600 font-medium"><i class="fa-solid fa-circle text-[8px] mr-1"></i> Aapne Diya:</span>
+                                    <span class="font-bold text-gray-800">Rs ${res.diya.toLocaleString()}</span>
+                                </div>
+                                <div class="flex justify-between text-xs py-1 mt-1">
+                                    <span class="text-amber-600 font-medium"><i class="fa-solid fa-circle text-[8px] mr-1"></i> Aapko Mila:</span>
+                                    <span class="font-bold text-gray-800">Rs ${res.mila.toLocaleString()}</span>
+                                </div>
+                            </div>
+
+                            <!-- Statement Email Option -->
+                            <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 mb-4 text-center cursor-pointer hover:bg-gray-50 transition" onclick="alert('Statement email feature jald active hoga!')">
+                                <span class="text-purple-900 font-semibold text-xs flex items-center justify-center gap-2">
+                                    <i class="fa-regular fa-envelope text-sm"></i> Statement Email Karein
+                                </span>
+                            </div>
+
+                            <!-- History Section -->
+                            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-10">
+                                <h3 class="font-bold text-gray-800 text-sm mb-2">History</h3>
+                                <div>${historyHTML}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
             }
         }
 
-        function addCustomer() {
-            let input = document.getElementById('customerInput');
+        function editStore() {
+            let name = prompt("Store ka naya naam likhein:", storeName);
+            if(name && name.trim() !== "") {
+                storeName = name.trim();
+                localStorage.setItem('adv_store_name', storeName);
+                render();
+            }
+        }
+
+        function addNewCust() {
+            let input = document.getElementById('custInput');
             let name = input.value.trim();
-            if (!name) {
-                alert("Baraye meherbani customer ka naam likhein!");
+            if(!name) {
+                alert("Customer ka naam likhna lazmi hai!");
+                return;
+            }
+            customers.push({ name: name, transactions: [] });
+            input.value = "";
+            render();
+        }
+
+        function openCustomerDetail(idx) {
+            selectedCustomerIndex = idx;
+            currentView = 'detail';
+            render();
+        }
+
+        function backToHome() {
+            currentView = 'home';
+            selectedCustomerIndex = null;
+            render();
+        }
+
+        function addTransaction(type) {
+            let amtInput = document.getElementById('txAmount');
+            let dateInput = document.getElementById('txDate');
+            let amount = parseFloat(amtInput.value);
+            let date = dateInput.value;
+
+            if(!amount || amount <= 0) {
+                alert("Baraye meherbani sahi amount darj karein!");
                 return;
             }
 
-            let amountStr = prompt(`Enter amount for ${name} (Positive for Milna, Negative for Dena):`, "0");
-            let amount = parseFloat(amountStr) || 0;
-
-            customers.push({ name: name, amount: amount });
-            input.value = "";
-            saveAndRender();
+            customers[selectedCustomerIndex].transactions.push({ type, amount, date });
+            render();
         }
 
-        function updateCustomerAmount(index) {
-            let cust = customers[index];
-            let newAmt = prompt(`Update amount for ${cust.name}:`, cust.amount);
-            if (newAmt !== null) {
-                customers[index].amount = parseFloat(newAmt) || 0;
-                saveAndRender();
+        function deleteTx(txIdx) {
+            if(confirm("Kya aap is entry ko delete karna chahte hain?")) {
+                customers[selectedCustomerIndex].transactions.splice(txIdx, 1);
+                render();
             }
         }
 
-        function saveAndRender() {
-            localStorage.setItem('new_customers', JSON.stringify(customers));
-            let listHTML = '';
-            let totalMilna = 0;
-            let totalDena = 0;
-
-            if (customers.length === 0) {
-                listHTML = `<p class="text-gray-400 text-center py-4 text-xs">Koi customer mojood nahi hai.</p>`;
-            } else {
-                customers.forEach((cust, idx) => {
-                    if (cust.amount > 0) totalMilna += cust.amount;
-                    if (cust.amount < 0) totalDena += Math.abs(cust.amount);
-
-                    let amtColor = cust.amount >= 0 ? 'text-emerald-600' : 'text-amber-600';
-                    let initialLetter = cust.name.charAt(0).toUpperCase();
-
-                    listHTML += `
-                        <div onclick="updateCustomerAmount(${idx})" class="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition rounded-xl px-1">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center font-bold text-sm">
-                                    ${initialLetter}
-                                </div>
-                                <span class="font-medium text-gray-800 text-sm">${cust.name}</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="font-bold text-sm ${amtColor}">Rs ${cust.amount.toLocaleString()}</span>
-                                <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-
-            document.getElementById('customersList').innerHTML = listHTML;
-            document.getElementById('milnaAmount').innerText = `Rs ${totalMilna.toLocaleString()}`;
-            document.getElementById('denaAmount').innerText = `Rs ${totalDena.toLocaleString()}`;
-        }
-
-        function switchTab(tabName) {
-            if (tabName !== 'Khata') {
-                alert(`${tabName} section par mazeed kaam jari hai!`);
+        function deleteCustomer() {
+            if(confirm("Kya aap is customer ko mukammal delete karna chahte hain?")) {
+                customers.splice(selectedCustomerIndex, 1);
+                currentView = 'home';
+                selectedCustomerIndex = null;
+                render();
             }
         }
 
-        // Initial Render
-        saveAndRender();
+        function switchTab(tab) {
+            if(tab !== 'Khata') alert(`${tab} section par mazeed kaam jari hai!`);
+        }
+
+        // Initial app load
+        render();
     </script>
 </body>
 </html>
