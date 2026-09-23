@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ur" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naya Dukaan Khata</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans pb-24 flex justify-center">
+
+    <!-- Mobile Screen Wrapper -->
+    <div class="w-full max-w-md bg-gray-50 min-h-screen relative shadow-2xl flex flex-col justify-between">
+
+        <!-- Top Header Section -->
+        <div>
+            <!-- Top App Bar -->
+            <div class="bg-white px-4 py-3 flex justify-between items-center border-b border-gray-100 text-gray-700 text-sm">
+                <div class="flex items-center gap-1 font-medium cursor-pointer">
+                    Dukaan Khata <i class="fa-solid fa-chevron-down text-xs"></i>
+                </div>
+                <div class="flex items-center gap-4 text-gray-500">
+                    <i class="fa-regular fa-comment-dots text-lg"></i>
+                    <i class="fa-solid fa-expand text-sm"></i>
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </div>
+            </div>
+
+            <!-- Store Banner -->
+            <div class="bg-purple-950 text-white p-5 m-3 rounded-2xl shadow-md relative">
+                <div class="flex items-start gap-3">
+                    <div class="bg-purple-800 bg-opacity-60 p-3 rounded-xl flex items-center justify-center">
+                        <i class="fa-solid fa-store text-xl text-purple-200"></i>
+                    </div>
+                    <div>
+                        <h1 id="storeTitle" class="text-xl font-bold tracking-wide">Raza Super Store</h1>
+                        <p class="text-xs text-purple-300 mt-0.5 cursor-pointer hover:underline" onclick="editStoreName()">Tap kar ke naam edit karein</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Dashboard Content -->
+            <div class="px-3">
+                <!-- Two Balance Cards -->
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <!-- Mujhe Milna Hai -->
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                        <div id="milnaAmount" class="text-emerald-600 text-xl font-bold">Rs 0</div>
+                        <div class="text-gray-400 text-xs mt-1">Mujhe Milna Hai</div>
+                    </div>
+                    <!-- Mujhe Dena Hai -->
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                        <div id="denaAmount" class="text-amber-600 text-xl font-bold">Rs 0</div>
+                        <div class="text-gray-400 text-xs mt-1">Mujhe Dena Hai</div>
+                    </div>
+                </div>
+
+                <!-- Add Customer Input Bar -->
+                <div class="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 mb-4">
+                    <input type="text" id="customerInput" placeholder="Naya customer ka naam" class="w-full px-3 py-2 text-sm bg-transparent focus:outline-none text-gray-700 placeholder-gray-400">
+                    <button onclick="addCustomer()" class="bg-emerald-100 text-emerald-700 px-5 py-2 rounded-xl font-semibold text-sm hover:bg-emerald-200 transition">Add</button>
+                </div>
+
+                <!-- Customers Section -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+                    <h2 class="text-gray-900 font-bold text-sm mb-3">Customers</h2>
+                    <div id="customersList" class="divide-y divide-gray-100">
+                        <!-- Dynamic Customer Item -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation Bar -->
+        <div class="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 flex justify-around py-2 shadow-lg">
+            <button onclick="switchTab('Dashboard')" class="flex flex-col items-center text-gray-400 text-[11px]">
+                <i class="fa-solid fa-chart-line text-lg mb-0.5"></i> Dashboard
+            </button>
+            <button onclick="switchTab('Bill')" class="flex flex-col items-center text-gray-400 text-[11px]">
+                <i class="fa-solid fa-file-lines text-lg mb-0.5"></i> Bill
+            </button>
+            <button onclick="switchTab('Stock')" class="flex flex-col items-center text-gray-400 text-[11px]">
+                <i class="fa-solid fa-box text-lg mb-0.5"></i> Stock
+            </button>
+            <button onclick="switchTab('Khata')" class="flex flex-col items-center text-purple-950 font-bold text-[11px] border-t-2 border-purple-950 pt-0.5">
+                <i class="fa-solid fa-dollar-sign text-lg mb-0.5"></i> Khata
+            </button>
+            <button onclick="switchTab('Orders')" class="flex flex-col items-center text-gray-400 text-[11px]">
+                <i class="fa-solid fa-bars text-lg mb-0.5"></i> Orders
+            </button>
+        </div>
+
+    </div>
+
+    <!-- JavaScript for Interactivity -->
+    <script>
+        let storeName = localStorage.getItem('new_store_name') || "Raza Super Store";
+        let customers = JSON.parse(localStorage.getItem('new_customers')) || [];
+
+        document.getElementById('storeTitle').innerText = storeName;
+
+        function editStoreName() {
+            let newName = prompt("Store ka naya naam likhein:", storeName);
+            if (newName && newName.trim() !== "") {
+                storeName = newName.trim();
+                localStorage.setItem('new_store_name', storeName);
+                document.getElementById('storeTitle').innerText = storeName;
+            }
+        }
+
+        function addCustomer() {
+            let input = document.getElementById('customerInput');
+            let name = input.value.trim();
+            if (!name) {
+                alert("Baraye meherbani customer ka naam likhein!");
+                return;
+            }
+
+            let amountStr = prompt(`Enter amount for ${name} (Positive for Milna, Negative for Dena):`, "0");
+            let amount = parseFloat(amountStr) || 0;
+
+            customers.push({ name: name, amount: amount });
+            input.value = "";
+            saveAndRender();
+        }
+
+        function updateCustomerAmount(index) {
+            let cust = customers[index];
+            let newAmt = prompt(`Update amount for ${cust.name}:`, cust.amount);
+            if (newAmt !== null) {
+                customers[index].amount = parseFloat(newAmt) || 0;
+                saveAndRender();
+            }
+        }
+
+        function saveAndRender() {
+            localStorage.setItem('new_customers', JSON.stringify(customers));
+            let listHTML = '';
+            let totalMilna = 0;
+            let totalDena = 0;
+
+            if (customers.length === 0) {
+                listHTML = `<p class="text-gray-400 text-center py-4 text-xs">Koi customer mojood nahi hai.</p>`;
+            } else {
+                customers.forEach((cust, idx) => {
+                    if (cust.amount > 0) totalMilna += cust.amount;
+                    if (cust.amount < 0) totalDena += Math.abs(cust.amount);
+
+                    let amtColor = cust.amount >= 0 ? 'text-emerald-600' : 'text-amber-600';
+                    let initialLetter = cust.name.charAt(0).toUpperCase();
+
+                    listHTML += `
+                        <div onclick="updateCustomerAmount(${idx})" class="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition rounded-xl px-1">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center font-bold text-sm">
+                                    ${initialLetter}
+                                </div>
+                                <span class="font-medium text-gray-800 text-sm">${cust.name}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-sm ${amtColor}">Rs ${cust.amount.toLocaleString()}</span>
+                                <i class="fa-solid fa-chevron-right text-gray-300 text-xs"></i>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById('customersList').innerHTML = listHTML;
+            document.getElementById('milnaAmount').innerText = `Rs ${totalMilna.toLocaleString()}`;
+            document.getElementById('denaAmount').innerText = `Rs ${totalDena.toLocaleString()}`;
+        }
+
+        function switchTab(tabName) {
+            if (tabName !== 'Khata') {
+                alert(`${tabName} section par mazeed kaam jari hai!`);
+            }
+        }
+
+        // Initial Render
+        saveAndRender();
+    </script>
+</body>
+</html>
