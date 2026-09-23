@@ -38,20 +38,20 @@
 
     </div>
 
-    <!-- JavaScript with Circular Donut Chart -->
+    <!-- JavaScript with Item Details, Picture Support & Statement Viewer -->
     <script>
         let storeName = localStorage.getItem('adv_store_name') || "Raza Super Store";
         let customers = JSON.parse(localStorage.getItem('adv_customers')) || [
             { 
                 name: "hadi", 
                 transactions: [
-                    { type: 'diya', amount: 8999, date: '2026-09-23' },
-                    { type: 'mila', amount: 1068, date: '2026-09-23' }
+                    { type: 'diya', amount: 8000, details: 'Cash & Sugar', image: '', date: '2026-09-23' },
+                    { type: 'mila', amount: 100, details: 'Cash Received', image: '', date: '2026-09-23' }
                 ] 
             }
         ];
 
-        let currentView = 'home';
+        let currentView = 'home'; // 'home', 'detail', 'statement'
         let selectedCustomerIndex = null;
 
         function getCustomerBalance(cust) {
@@ -156,10 +156,8 @@
                 let res = getCustomerBalance(cust);
                 let today = new Date().toISOString().split('T')[0];
 
-                // Calculations for Donut Chart (conic-gradient)
                 let totalSum = res.diya + res.mila;
                 let diyaAngle = totalSum > 0 ? (res.diya / totalSum) * 360 : 360;
-                
                 let balanceText = Math.abs(res.balance).toLocaleString();
                 let balanceLabel = res.balance >= 0 ? "Milna Hai" : "Dena Hai";
                 let balanceColorClass = res.balance >= 0 ? "text-emerald-600" : "text-amber-600";
@@ -172,11 +170,13 @@
                         let actualIdx = cust.transactions.length - 1 - revIdx;
                         let typeText = t.type === 'diya' ? 'Aapne Diya' : 'Aapko Mila';
                         let typeColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
+                        let imgTag = t.image ? `<img src="${t.image}" class="w-10 h-10 object-cover rounded-lg border mt-1">` : '';
                         historyHTML += `
-                            <div class="py-3 flex justify-between items-center border-b border-gray-100">
+                            <div class="py-3 flex justify-between items-start border-b border-gray-100">
                                 <div>
-                                    <div class="font-bold text-sm text-gray-800">${typeText}</div>
-                                    <div class="text-xs text-gray-400">${t.date}</div>
+                                    <div class="font-bold text-sm text-gray-800">${typeText} <span class="text-xs font-normal text-gray-500">(${t.details || 'Cash/Item'})</span></div>
+                                    <div class="text-xs text-gray-400 mt-0.5">${t.date}</div>
+                                    ${imgTag}
                                 </div>
                                 <div class="flex items-center gap-3">
                                     <span class="font-bold text-sm ${typeColor}">Rs ${t.amount.toLocaleString()}</span>
@@ -204,37 +204,41 @@
                             <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center mb-3">
                                 <div class="relative w-44 h-44 rounded-full flex items-center justify-center shadow-inner" 
                                      style="background: conic-gradient(#10b981 0deg ${diyaAngle}deg, #d97706 ${diyaAngle}deg 360deg);">
-                                    <!-- Inner White Circle for Donut Effect -->
                                     <div class="absolute w-32 h-32 bg-white rounded-full flex flex-col items-center justify-center shadow-sm">
                                         <div class="text-base font-extrabold ${balanceColorClass}">Rs ${balanceText}</div>
                                         <div class="text-gray-400 text-[11px] font-medium mt-0.5">${balanceLabel}</div>
                                     </div>
                                 </div>
 
-                                <!-- Legend -->
                                 <div class="flex items-center justify-center gap-6 mt-5 text-xs">
                                     <div class="flex items-center gap-1.5 font-medium text-gray-700">
                                         <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
-                                        <span>Aapne Diya: <strong class="text-emerald-600">Rs ${res.diya.toLocaleString()}</strong></span>
+                                        <span>Diya: <strong class="text-emerald-600">Rs ${res.diya.toLocaleString()}</strong></span>
                                     </div>
                                     <div class="flex items-center gap-1.5 font-medium text-gray-700">
                                         <span class="w-3 h-3 rounded-full bg-amber-600 inline-block"></span>
-                                        <span>Aapko Mila: <strong class="text-amber-600">Rs ${res.mila.toLocaleString()}</strong></span>
+                                        <span>Mila: <strong class="text-amber-600">Rs ${res.mila.toLocaleString()}</strong></span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Input Form (Diya / Mila) -->
+                            <!-- Input Form with Item Details & Picture Upload -->
                             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
                                 <div class="mb-3">
                                     <label class="text-xs text-gray-500 font-medium">Amount (Rs)</label>
                                     <input type="number" id="txAmount" placeholder="e.g. 1000" class="w-full mt-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-600">
                                 </div>
+                                <div class="mb-3">
+                                    <label class="text-xs text-gray-500 font-medium">Item Details / Kiya Diya (e.g. Sugar, Cash)</label>
+                                    <input type="text" id="txDetails" placeholder="Item ya Cash ka naam likhein" class="w-full mt-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-600">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="text-xs text-gray-500 font-medium">Product Picture (Optional)</label>
+                                    <input type="file" id="txImage" accept="image/*" class="w-full mt-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none">
+                                </div>
                                 <div class="mb-4">
                                     <label class="text-xs text-gray-500 font-medium">Date</label>
-                                    <div class="relative mt-1">
-                                        <input type="date" id="txDate" value="${today}" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none">
-                                    </div>
+                                    <input type="date" id="txDate" value="${today}" class="w-full mt-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none">
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
                                     <button onclick="addTransaction('diya')" class="bg-emerald-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-emerald-700 transition shadow-sm">Aapne Diya</button>
@@ -242,10 +246,10 @@
                                 </div>
                             </div>
 
-                            <!-- Statement Email Option -->
-                            <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 mb-4 text-center cursor-pointer hover:bg-gray-50 transition" onclick="alert('Statement email feature jald active hoga!')">
-                                <span class="text-purple-900 font-semibold text-xs flex items-center justify-center gap-2">
-                                    <i class="fa-regular fa-envelope text-sm"></i> Statement Email Karein
+                            <!-- Open Statement Button -->
+                            <div class="bg-white p-3 rounded-2xl shadow-sm border border-purple-200 mb-4 text-center cursor-pointer hover:bg-purple-50 transition" onclick="openStatementView()">
+                                <span class="text-purple-950 font-bold text-xs flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-file-invoice text-sm"></i> Statement Open Karein (Client ke liye)
                                 </span>
                             </div>
 
@@ -254,6 +258,72 @@
                                 <h3 class="font-bold text-gray-800 text-sm mb-2">History</h3>
                                 <div>${historyHTML}</div>
                             </div>
+                        </div>
+                    </div>
+                `;
+            } else if (currentView === 'statement') {
+                let cust = customers[selectedCustomerIndex];
+                let res = getCustomerBalance(cust);
+
+                let statementRows = '';
+                cust.transactions.forEach((t, i) => {
+                    let typeText = t.type === 'diya' ? 'Aapne Diya (Udhar)' : 'Aapko Mila (Payment)';
+                    let amountColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
+                    let imgHtml = t.image ? `<img src="${t.image}" class="w-12 h-12 object-cover rounded-lg border mt-2">` : '<span class="text-gray-300 text-xs">No Image</span>';
+                    
+                    statementRows += `
+                        <tr class="border-b border-gray-100">
+                            <td class="py-3 px-2 text-xs text-gray-600">${t.date}</td>
+                            <td class="py-3 px-2 text-xs font-bold text-gray-800">${typeText}<br><span class="font-normal text-gray-500">${t.details || '-'}</span></td>
+                            <td class="py-3 px-2 text-xs text-center">${imgHtml}</td>
+                            <td class="py-3 px-2 text-xs text-right font-bold ${amountColor}">Rs ${t.amount.toLocaleString()}</td>
+                        </tr>
+                    `;
+                });
+
+                container.innerHTML = `
+                    <div class="bg-white min-h-screen p-5">
+                        <!-- Top Statement Header -->
+                        <div class="flex justify-between items-center border-b pb-3 mb-4">
+                            <div>
+                                <h2 class="font-bold text-lg text-purple-950">${storeName}</h2>
+                                <p class="text-xs text-gray-400">Customer Statement: <strong class="text-gray-700">${cust.name}</strong></p>
+                            </div>
+                            <button onclick="currentView='detail'; render();" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-xl text-xs font-semibold hover:bg-gray-200">
+                                <i class="fa-solid fa-xmark mr-1"></i> Band Karein
+                            </button>
+                        </div>
+
+                        <!-- Summary Box -->
+                        <div class="bg-purple-50 p-4 rounded-2xl mb-4 border border-purple-100 flex justify-between items-center">
+                            <div>
+                                <div class="text-xs text-purple-800 font-medium">Net Balance Total:</div>
+                                <div class="text-xl font-bold text-purple-950">Rs ${Math.abs(res.balance).toLocaleString()} (${res.balance >= 0 ? 'Milna Hai' : 'Dena Hai'})</div>
+                            </div>
+                            <button onclick="window.print()" class="px-4 py-2 bg-purple-900 text-white rounded-xl text-xs font-bold shadow hover:bg-purple-800">
+                                <i class="fa-solid fa-print mr-1"></i> Print / Save PDF
+                            </button>
+                        </div>
+
+                        <!-- Itemized Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 text-gray-500 text-xs border-b">
+                                        <th class="py-2 px-2 font-semibold">Date</th>
+                                        <th class="py-2 px-2 font-semibold">Details / Item</th>
+                                        <th class="py-2 px-2 font-semibold text-center">Picture</th>
+                                        <th class="py-2 px-2 font-semibold text-right">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${statementRows.length > 0 ? statementRows : `<tr><td colspan="4" class="text-center py-4 text-xs text-gray-400">Koi record nahi hai</td></tr>`}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-8 text-center text-xs text-gray-400 border-t pt-4">
+                            Yeh computerized statement Dukaan Khata App se generate ki gayi hai.
                         </div>
                     </div>
                 `;
@@ -293,10 +363,19 @@
             render();
         }
 
+        function openStatementView() {
+            currentView = 'statement';
+            render();
+        }
+
         function addTransaction(type) {
             let amtInput = document.getElementById('txAmount');
+            let detailsInput = document.getElementById('txDetails');
             let dateInput = document.getElementById('txDate');
+            let imgInput = document.getElementById('txImage');
+
             let amount = parseFloat(amtInput.value);
+            let details = detailsInput.value.trim() || (type === 'diya' ? 'Udhar / Item' : 'Payment Received');
             let date = dateInput.value;
 
             if(!amount || amount <= 0) {
@@ -304,8 +383,18 @@
                 return;
             }
 
-            customers[selectedCustomerIndex].transactions.push({ type, amount, date });
-            render();
+            let file = imgInput.files[0];
+            if (file) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    customers[selectedCustomerIndex].transactions.push({ type, amount, details, image: e.target.result, date });
+                    render();
+                };
+                reader.readAsDataURL(file);
+            } else {
+                customers[selectedCustomerIndex].transactions.push({ type, amount, details, image: '', date });
+                render();
+            }
         }
 
         function deleteTx(txIdx) {
