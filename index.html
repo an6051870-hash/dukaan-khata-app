@@ -38,15 +38,15 @@
 
     </div>
 
-    <!-- JavaScript with Visual Graph -->
+    <!-- JavaScript with Circular Donut Chart -->
     <script>
         let storeName = localStorage.getItem('adv_store_name') || "Raza Super Store";
         let customers = JSON.parse(localStorage.getItem('adv_customers')) || [
             { 
                 name: "hadi", 
                 transactions: [
-                    { type: 'diya', amount: 8000, date: '2026-09-23' },
-                    { type: 'mila', amount: 100, date: '2026-09-23' }
+                    { type: 'diya', amount: 8999, date: '2026-09-23' },
+                    { type: 'mila', amount: 1068, date: '2026-09-23' }
                 ] 
             }
         ];
@@ -156,10 +156,13 @@
                 let res = getCustomerBalance(cust);
                 let today = new Date().toISOString().split('T')[0];
 
-                // Calculate percentages for the graph bars
-                let maxVal = Math.max(res.diya, res.mila, 1);
-                let diyaPercent = Math.round((res.diya / maxVal) * 100);
-                let milaPercent = Math.round((res.mila / maxVal) * 100);
+                // Calculations for Donut Chart (conic-gradient)
+                let totalSum = res.diya + res.mila;
+                let diyaAngle = totalSum > 0 ? (res.diya / totalSum) * 360 : 360;
+                
+                let balanceText = Math.abs(res.balance).toLocaleString();
+                let balanceLabel = res.balance >= 0 ? "Milna Hai" : "Dena Hai";
+                let balanceColorClass = res.balance >= 0 ? "text-emerald-600" : "text-amber-600";
 
                 let historyHTML = '';
                 if(cust.transactions.length === 0) {
@@ -197,10 +200,28 @@
                         </div>
 
                         <div class="p-3">
-                            <!-- Balance Card -->
-                            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-center mb-3">
-                                <div class="text-2xl font-bold text-emerald-600">Rs ${res.balance.toLocaleString()}</div>
-                                <div class="text-gray-400 text-xs mt-1">Aapko Milna Hai</div>
+                            <!-- Circular Donut Chart Card -->
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center mb-3">
+                                <div class="relative w-44 h-44 rounded-full flex items-center justify-center shadow-inner" 
+                                     style="background: conic-gradient(#10b981 0deg ${diyaAngle}deg, #d97706 ${diyaAngle}deg 360deg);">
+                                    <!-- Inner White Circle for Donut Effect -->
+                                    <div class="absolute w-32 h-32 bg-white rounded-full flex flex-col items-center justify-center shadow-sm">
+                                        <div class="text-base font-extrabold ${balanceColorClass}">Rs ${balanceText}</div>
+                                        <div class="text-gray-400 text-[11px] font-medium mt-0.5">${balanceLabel}</div>
+                                    </div>
+                                </div>
+
+                                <!-- Legend -->
+                                <div class="flex items-center justify-center gap-6 mt-5 text-xs">
+                                    <div class="flex items-center gap-1.5 font-medium text-gray-700">
+                                        <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                                        <span>Aapne Diya: <strong class="text-emerald-600">Rs ${res.diya.toLocaleString()}</strong></span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 font-medium text-gray-700">
+                                        <span class="w-3 h-3 rounded-full bg-amber-600 inline-block"></span>
+                                        <span>Aapko Mila: <strong class="text-amber-600">Rs ${res.mila.toLocaleString()}</strong></span>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Input Form (Diya / Mila) -->
@@ -218,46 +239,6 @@
                                 <div class="grid grid-cols-2 gap-3">
                                     <button onclick="addTransaction('diya')" class="bg-emerald-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-emerald-700 transition shadow-sm">Aapne Diya</button>
                                     <button onclick="addTransaction('mila')" class="bg-amber-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-amber-700 transition shadow-sm">Aapko Mila</button>
-                                </div>
-                            </div>
-
-                            <!-- Hisab ka Breakdown & Visual Graph -->
-                            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
-                                <div class="font-bold text-gray-800 text-sm mb-3 flex items-center justify-between">
-                                    <span>Hisab ka Breakdown</span>
-                                    <i class="fa-solid fa-chart-bar text-purple-900 text-sm"></i>
-                                </div>
-                                
-                                <!-- Text Details -->
-                                <div class="flex justify-between text-xs py-1 border-b border-gray-50 mb-2">
-                                    <span class="text-emerald-600 font-medium"><i class="fa-solid fa-circle text-[8px] mr-1"></i> Aapne Diya:</span>
-                                    <span class="font-bold text-gray-800">Rs ${res.diya.toLocaleString()}</span>
-                                </div>
-                                <div class="flex justify-between text-xs py-1 mb-4">
-                                    <span class="text-amber-600 font-medium"><i class="fa-solid fa-circle text-[8px] mr-1"></i> Aapko Mila:</span>
-                                    <span class="font-bold text-gray-800">Rs ${res.mila.toLocaleString()}</span>
-                                </div>
-
-                                <!-- Visual Bar Graph -->
-                                <div class="space-y-2 pt-2 border-t border-gray-100">
-                                    <div>
-                                        <div class="flex justify-between text-[11px] text-gray-500 mb-1">
-                                            <span>Diya Graph</span>
-                                            <span>${diyaPercent}%</span>
-                                        </div>
-                                        <div class="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
-                                            <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: ${diyaPercent}%"></div>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div class="flex justify-between text-[11px] text-gray-500 mb-1">
-                                            <span>Mila Graph</span>
-                                            <span>${milaPercent}%</span>
-                                        </div>
-                                        <div class="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
-                                            <div class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: ${milaPercent}%"></div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
 
