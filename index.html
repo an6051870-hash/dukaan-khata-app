@@ -43,7 +43,6 @@
     <!-- JavaScript for Advanced Khata & History -->
     <script>
         let storeName = localStorage.getItem('adv_store_name') || "Raza Super Store";
-        // Customers structure with history support
         let customers = JSON.parse(localStorage.getItem('adv_customers')) || [
             { 
                 name: "hadi", 
@@ -163,7 +162,6 @@
                 if(cust.transactions.length === 0) {
                     historyHTML = `<p class="text-gray-400 text-center py-4 text-xs">Abhi koi transaction nahi hai.</p>`;
                 } else {
-                    // Reverse to show latest first
                     [...cust.transactions].reverse().forEach((t, revIdx) => {
                         let actualIdx = cust.transactions.length - 1 - revIdx;
                         let typeText = t.type === 'diya' ? 'Aapne Diya' : 'Aapko Mila';
@@ -319,7 +317,6 @@
             if(tab !== 'Khata') alert(`${tab} section par mazeed kaam jari hai!`);
         }
 
-        // Initial app load
         render();
     </script>
 </body>
