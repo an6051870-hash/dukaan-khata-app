@@ -3,16 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dukaan Khata</title>
+    <title>Dukaan Khata - Cloud Sync</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase App (Modular CDN) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // Secure Public Firebase Config for Realtime Sync
+        const firebaseConfig = {
+            databaseURL: "https://dukaan-khata-default-rtdb.firebaseio.com/"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Global variables exposed to app
+        window.db = db;
+        window.dbRef = ref;
+        window.dbSet = set;
+        window.dbOnValue = onValue;
+        window.dbPush = push;
+        window.dbRemove = remove;
+        
+        // Trigger initial load check
+        if(window.initApp) window.initApp();
+    </script>
 </head>
 <body class="bg-gray-100 font-sans pb-24 flex justify-center">
 
     <!-- Mobile Screen Wrapper -->
     <div class="w-full max-w-md bg-gray-50 min-h-screen relative shadow-2xl flex flex-col justify-between">
+
+        <!-- Connection Status Banner -->
+        <div id="syncStatus" class="bg-amber-500 text-white text-[10px] text-center py-0.5 font-medium tracking-wide">
+            Connecting to Cloud...
+        </div>
 
         <!-- Main Dynamic View Container -->
         <div id="appContainer"></div>
@@ -38,35 +68,85 @@
 
     </div>
 
-    <!-- JavaScript with Safe History & Individual Transaction Receipts -->
+    <!-- Application Script with Realtime Listeners -->
     <script>
-        let storeName = localStorage.getItem('adv_store_name') || "Raza Super Store";
-        let customers = JSON.parse(localStorage.getItem('adv_customers')) || [
-            { 
-                name: "hadi", 
-                transactions: [
-                    { type: 'diya', amount: 7931, details: 'Cash & Sugar', image: '', date: '2026-09-23', txId: 'TXN-98412' }
-                ] 
-            }
-        ];
-
-        let currentView = 'home'; // 'home', 'detail', 'receipt', 'fullStatement'
-        let selectedCustomerIndex = null;
+        let storeName = "Raza Super Store";
+        let customers = [];
+        let currentView = 'home';
+        let selectedCustomerKey = null;
         let selectedTxIndex = null;
+        let isCloudConnected = false;
+
+        function initApp() {
+            if (!window.db) {
+                setTimeout(initApp, 100);
+                return;
+            }
+
+            // Realtime Listeners from Firebase Cloud Database
+            const storeRef = window.dbRef(window.db, 'dukaan_app/storeName');
+            window.dbOnValue(storeRef, (snapshot) => {
+                if(snapshot.exists()) {
+                    storeName = snapshot.val();
+                }
+                updateSyncStatus(true);
+                render();
+            });
+
+            const custRef = window.dbRef(window.db, 'dukaan_app/customers');
+            window.dbOnValue(custRef, (snapshot) => {
+                customers = [];
+                if(snapshot.exists()) {
+                    const data = snapshot.val();
+                    for (let key in data) {
+                        customers.push({
+                            firebaseKey: key,
+                            name: data[key].name || "Unnamed",
+                            transactions: data[key].transactions || []
+                        });
+                    }
+                } else {
+                    // Default initial customer if database is completely empty
+                    let defaultCustRef = window.dbPush(window.dbRef(window.db, 'dukaan_app/customers'));
+                    window.dbSet(defaultCustRef, {
+                        name: "hadi",
+                        transactions: [
+                            { type: 'diya', amount: 7931, details: 'Cash & Sugar', image: '', date: '2026-09-23', txId: 'TXN-98412' }
+                        ]
+                    });
+                }
+                updateSyncStatus(true);
+                render();
+            });
+        }
+        window.initApp = initApp;
+
+        function updateSyncStatus(connected) {
+            isCloudConnected = connected;
+            let statusEl = document.getElementById('syncStatus');
+            if(statusEl) {
+                if(connected) {
+                    statusEl.innerText = "Cloud Synced (Laptop & Mobile Live)";
+                    statusEl.className = "bg-emerald-600 text-white text-[10px] text-center py-0.5 font-medium tracking-wide";
+                }
+            }
+        }
 
         function getCustomerBalance(cust) {
             let diya = 0;
             let mila = 0;
-            cust.transactions.forEach(t => {
-                if(t.type === 'diya') diya += t.amount;
-                if(t.type === 'mila') mila += t.amount;
-            });
+            if(cust.transactions) {
+                cust.transactions.forEach(t => {
+                    if(t.type === 'diya') diya += t.amount;
+                    if(t.type === 'mila') mila += t.amount;
+                });
+            }
             return { balance: diya - mila, diya, mila };
         }
 
         function render() {
-            localStorage.setItem('adv_customers', JSON.stringify(customers));
             let container = document.getElementById('appContainer');
+            if(!container) return;
 
             if (currentView === 'home') {
                 let totalMilna = 0;
@@ -83,7 +163,7 @@
 
                         let color = res.balance >= 0 ? 'text-emerald-600' : 'text-amber-600';
                         listHTML += `
-                            <div onclick="openCustomerDetail(${idx})" class="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition rounded-xl px-1">
+                            <div onclick="openCustomerDetail('${cust.firebaseKey}')" class="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition rounded-xl px-1">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center font-bold text-sm">
                                         ${cust.name.charAt(0).toUpperCase()}
@@ -152,7 +232,9 @@
                     </div>
                 `;
             } else if (currentView === 'detail') {
-                let cust = customers[selectedCustomerIndex];
+                let cust = customers.find(c => c.firebaseKey === selectedCustomerKey);
+                if(!cust) { backToHome(); return; }
+
                 let res = getCustomerBalance(cust);
                 let today = new Date().toISOString().split('T')[0];
 
@@ -163,7 +245,7 @@
                 let balanceColorClass = res.balance >= 0 ? "text-emerald-600" : "text-amber-600";
 
                 let historyHTML = '';
-                if(cust.transactions.length === 0) {
+                if(!cust.transactions || cust.transactions.length === 0) {
                     historyHTML = `<p class="text-gray-400 text-center py-4 text-xs">Abhi koi transaction nahi hai.</p>`;
                 } else {
                     [...cust.transactions].reverse().forEach((t, revIdx) => {
@@ -270,7 +352,7 @@
                     </div>
                 `;
             } else if (currentView === 'receipt') {
-                let cust = customers[selectedCustomerIndex];
+                let cust = customers.find(c => c.firebaseKey === selectedCustomerKey);
                 let t = cust.transactions[selectedTxIndex];
                 let typeText = t.type === 'diya' ? 'Aapne Diya (Udhar)' : 'Aapko Mila (Payment)';
                 let amountColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
@@ -322,24 +404,26 @@
                     </div>
                 `;
             } else if (currentView === 'fullStatement') {
-                let cust = customers[selectedCustomerIndex];
+                let cust = customers.find(c => c.firebaseKey === selectedCustomerKey);
                 let res = getCustomerBalance(cust);
 
                 let statementRows = '';
-                cust.transactions.forEach((t, i) => {
-                    let typeText = t.type === 'diya' ? 'Aapne Diya' : 'Aapko Mila';
-                    let amountColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
-                    let imgHtml = t.image ? `<img src="${t.image}" class="w-10 h-10 object-cover rounded-lg border mt-1">` : '-';
-                    
-                    statementRows += `
-                        <tr class="border-b border-gray-100">
-                            <td class="py-3 px-2 text-xs text-gray-600">${t.date}</td>
-                            <td class="py-3 px-2 text-xs font-bold text-gray-800">${typeText}<br><span class="font-normal text-gray-500">${t.details || '-'}</span></td>
-                            <td class="py-3 px-2 text-xs text-center">${imgHtml}</td>
-                            <td class="py-3 px-2 text-xs text-right font-bold ${amountColor}">Rs ${t.amount.toLocaleString()}</td>
-                        </tr>
-                    `;
-                });
+                if(cust.transactions) {
+                    cust.transactions.forEach((t) => {
+                        let typeText = t.type === 'diya' ? 'Aapne Diya' : 'Aapko Mila';
+                        let amountColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
+                        let imgHtml = t.image ? `<img src="${t.image}" class="w-10 h-10 object-cover rounded-lg border mt-1">` : '-';
+                        
+                        statementRows += `
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-2 text-xs text-gray-600">${t.date}</td>
+                                <td class="py-3 px-2 text-xs font-bold text-gray-800">${typeText}<br><span class="font-normal text-gray-500">${t.details || '-'}</span></td>
+                                <td class="py-3 px-2 text-xs text-center">${imgHtml}</td>
+                                <td class="py-3 px-2 text-xs text-right font-bold ${amountColor}">Rs ${t.amount.toLocaleString()}</td>
+                            </tr>
+                        `;
+                    });
+                }
 
                 container.innerHTML = `
                     <div class="bg-white min-h-screen p-5">
@@ -391,8 +475,7 @@
             let name = prompt("Store ka naya naam likhein:", storeName);
             if(name && name.trim() !== "") {
                 storeName = name.trim();
-                localStorage.setItem('adv_store_name', storeName);
-                render();
+                window.dbSet(window.dbRef(window.db, 'dukaan_app/storeName'), storeName);
             }
         }
 
@@ -403,20 +486,20 @@
                 alert("Customer ka naam likhna lazmi hai!");
                 return;
             }
-            customers.push({ name: name, transactions: [] });
+            let newRef = window.dbPush(window.dbRef(window.db, 'dukaan_app/customers'));
+            window.dbSet(newRef, { name: name, transactions: [] });
             input.value = "";
-            render();
         }
 
-        function openCustomerDetail(idx) {
-            selectedCustomerIndex = idx;
+        function openCustomerDetail(firebaseKey) {
+            selectedCustomerKey = firebaseKey;
             currentView = 'detail';
             render();
         }
 
         function backToHome() {
             currentView = 'home';
-            selectedCustomerIndex = null;
+            selectedCustomerKey = null;
             render();
         }
 
@@ -447,34 +530,47 @@
                 return;
             }
 
+            let cust = customers.find(c => c.firebaseKey === selectedCustomerKey);
+            if(!cust) return;
+
+            let existingTransactions = cust.transactions || [];
+
             let file = imgInput.files[0];
             if (file) {
                 let reader = new FileReader();
                 reader.onload = function(e) {
-                    customers[selectedCustomerIndex].transactions.push({ type, amount, details, image: e.target.result, date, txId });
-                    render();
+                    existingTransactions.push({ type, amount, details, image: e.target.result, date, txId });
+                    saveTransactionsToCloud(existingTransactions);
                 };
                 reader.readAsDataURL(file);
             } else {
-                customers[selectedCustomerIndex].transactions.push({ type, amount, details, image: '', date, txId });
-                render();
+                existingTransactions.push({ type, amount, details, image: '', date, txId });
+                saveTransactionsToCloud(existingTransactions);
             }
+        }
+
+        function saveTransactionsToCloud(updatedTransactions) {
+            window.dbSet(window.dbRef(window.db, `dukaan_app/customers/${selectedCustomerKey}/transactions`), updatedTransactions);
+            amtInputClean();
+        }
+
+        function amtInputClean() {
+            let amtInput = document.getElementById('txAmount');
+            let detailsInput = document.getElementById('txDetails');
+            if(amtInput) amtInput.value = '';
+            if(detailsInput) detailsInput.value = '';
         }
 
         function deleteCustomer() {
             if(confirm("Kya aap is customer ko mukammal delete karna chahte hain?")) {
-                customers.splice(selectedCustomerIndex, 1);
-                currentView = 'home';
-                selectedCustomerIndex = null;
-                render();
+                window.dbRemove(window.dbRef(window.db, `dukaan_app/customers/${selectedCustomerKey}`));
+                backToHome();
             }
         }
 
         function switchTab(tab) {
             if(tab !== 'Khata') alert(`${tab} section par mazeed kaam jari hai!`);
         }
-
-        render();
     </script>
 </body>
 </html>
