@@ -38,7 +38,7 @@
 
     </div>
 
-    <!-- JavaScript with Item Details, Picture Support & Statement Viewer -->
+    <!-- JavaScript with Direct Camera Capture -->
     <script>
         let storeName = localStorage.getItem('adv_store_name') || "Raza Super Store";
         let customers = JSON.parse(localStorage.getItem('adv_customers')) || [
@@ -51,7 +51,7 @@
             }
         ];
 
-        let currentView = 'home'; // 'home', 'detail', 'statement'
+        let currentView = 'home';
         let selectedCustomerIndex = null;
 
         function getCustomerBalance(cust) {
@@ -170,7 +170,7 @@
                         let actualIdx = cust.transactions.length - 1 - revIdx;
                         let typeText = t.type === 'diya' ? 'Aapne Diya' : 'Aapko Mila';
                         let typeColor = t.type === 'diya' ? 'text-emerald-600' : 'text-amber-600';
-                        let imgTag = t.image ? `<img src="${t.image}" class="w-10 h-10 object-cover rounded-lg border mt-1">` : '';
+                        let imgTag = t.image ? `<img src="${t.image}" class="w-12 h-12 object-cover rounded-lg border mt-1">` : '';
                         historyHTML += `
                             <div class="py-3 flex justify-between items-start border-b border-gray-100">
                                 <div>
@@ -222,7 +222,7 @@
                                 </div>
                             </div>
 
-                            <!-- Input Form with Item Details & Picture Upload -->
+                            <!-- Input Form with Direct Camera Capture -->
                             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
                                 <div class="mb-3">
                                     <label class="text-xs text-gray-500 font-medium">Amount (Rs)</label>
@@ -233,8 +233,13 @@
                                     <input type="text" id="txDetails" placeholder="Item ya Cash ka naam likhein" class="w-full mt-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-600">
                                 </div>
                                 <div class="mb-3">
-                                    <label class="text-xs text-gray-500 font-medium">Product Picture (Optional)</label>
-                                    <input type="file" id="txImage" accept="image/*" class="w-full mt-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none">
+                                    <label class="text-xs text-gray-500 font-medium">Product Picture (Camera se banayein)</label>
+                                    <div class="mt-1 flex items-center gap-2">
+                                        <label class="w-full cursor-pointer bg-purple-50 border border-purple-200 text-purple-900 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-purple-100 transition">
+                                            <i class="fa-solid fa-camera text-base"></i> Camera kholen / Tasveer Lein
+                                            <input type="file" id="txImage" accept="image/*" capture="environment" class="hidden">
+                                        </label>
+                                    </div>
                                 </div>
                                 <div class="mb-4">
                                     <label class="text-xs text-gray-500 font-medium">Date</label>
@@ -414,7 +419,7 @@
         }
 
         function switchTab(tab) {
-            if(tab !== 'Khata') alert(`${tab} section par mazeed kaam jari hai!`);
+            if(tab !== 'Khata') alert(`${tab} section par mazeed kaam jari hai! पुरानी app elements ko update kar diya gaya hai.`);
         }
 
         render();
